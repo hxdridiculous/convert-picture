@@ -61,9 +61,3 @@
 - Firefox 55+
 - Safari 11+
 - Edge 79+
-
-## 本地开发
-
-1. 克隆仓库
-```bash
-git clone https://github.com/yourusername/convert-picture.git
