@@ -1,61 +1,64 @@
-# 图片转换工具
+# Image Converter
 
-一个简单易用的在线图片转换和压缩工具，无需上传到服务器，完全在浏览器中进行处理。
+[English](README.md) | [简体中文](README.zh-CN.md)
 
-## 功能特点
+A simple online image conversion and compression tool. Images are processed entirely in your browser and are never uploaded to a server.
 
-- 🖼️ 支持多种图片格式：JPG, PNG, GIF, BMP, WebP
-- 🔄 格式转换：可以在不同格式之间转换图片
-- 📏 调整尺寸：可以设置最大宽度和高度
-- 🗜️ 压缩图片：可调节压缩质量
-- 📊 实时预览：处理前后对比和节省空间统计
-- 📦 批量处理：支持多文件处理和批量下载
-- 🔒 隐私保护：所有处理在本地完成，不上传服务器
+## Features
 
-## 预设模式
+- Supports JPG, PNG, GIF, BMP, and WebP images
+- Converts images between multiple formats
+- Resizes images using configurable maximum width and height
+- Compresses images with adjustable quality
+- Previews before-and-after images and displays file-size savings
+- Processes multiple files and downloads results as a ZIP archive
+- Keeps image data private by processing everything locally
 
-工具提供三种预设模式，满足不同需求：
+## Preset Modes
 
-1. **缩小优先模式**：适合需要快速加载的网页图片
-   - 图片质量: 0.6 (中等压缩)
-   - 最大尺寸: 1280×720 像素
-   - 输出格式: JPG
+The tool provides three presets for different use cases:
 
-2. **普通压缩模式**：适合大多数使用场景
-   - 图片质量: 0.75 (良好质量)
-   - 最大尺寸: 1920×1080 像素
-   - 输出格式: JPG
+1. **Smaller Size**: Best for web images that need to load quickly
+   - Image quality: 0.6 (medium compression)
+   - Maximum size: 1280 x 720 pixels
+   - Output format: JPG
 
-3. **清晰优先模式**：适合需要高质量展示的图片
-   - 图片质量: 0.9 (高质量)
-   - 保持原始尺寸
-   - 输出格式: WebP (更好的压缩效果)
+2. **Balanced**: Suitable for most use cases
+   - Image quality: 0.75 (good quality)
+   - Maximum size: 1920 x 1080 pixels
+   - Output format: JPG
 
-## 自定义设置
+3. **High Quality**: Best for images that need to retain more detail
+   - Image quality: 0.9 (high quality)
+   - Keeps the original dimensions
+   - Output format: WebP (for better compression)
 
-除了预设模式，还可以自定义以下参数：
+## Custom Settings
 
-- 图片质量 (0.1-1.0)
-- 最大宽度和高度
-- 输出格式 (JPG, PNG, WebP 或保持原始格式)
+In addition to the presets, you can configure:
 
-## 使用方法
+- Image quality (0.1-1.0)
+- Maximum width and height
+- Output format (JPG, PNG, WebP, or the original format)
 
-1. 点击上传区域或拖放图片到上传区域
-2. 选择压缩模式或自定义设置
-3. 点击"开始处理"按钮
-4. 处理完成后，可以单独下载或批量下载处理后的图片
+## Usage
 
-## 技术实现
+1. Click the upload area or drag images onto it.
+2. Select a compression mode or configure custom settings.
+3. Process an individual image or click **Process All**.
+4. Download processed images individually or as a ZIP archive.
 
-- 纯前端实现，使用 HTML5, CSS3 和 JavaScript
-- 使用 Canvas API 进行图片处理
-- 使用 JSZip 库实现批量下载功能
-- 响应式设计，适配各种设备
+## Implementation
 
-## 浏览器兼容性
+- Client-side implementation using HTML5, CSS3, and JavaScript
+- Canvas API and Pica for image resizing
+- Compressor.js for image compression
+- JSZip for batch downloads
+- Responsive layout for desktop and mobile devices
 
-支持所有现代浏览器，包括：
+## Browser Support
+
+All modern browsers are supported, including:
 
 - Chrome 60+
 - Firefox 55+

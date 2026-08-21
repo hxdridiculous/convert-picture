@@ -1,15 +1,19 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="light">
+<html lang="en" data-theme="light" data-language="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>高性能在线图片工具</title>
+    <title data-i18n="app.title">High-Performance Online Image Tool</title>
     <script>
         try {
             document.documentElement.dataset.theme = localStorage.getItem('convertPictureTheme') === 'dark' ? 'dark' : 'light';
+            document.documentElement.dataset.language = localStorage.getItem('convertPictureLanguage') === 'zh' ? 'zh' : 'en';
+            document.documentElement.lang = document.documentElement.dataset.language === 'zh' ? 'zh-CN' : 'en';
         } catch (error) {
             document.documentElement.dataset.theme = 'light';
+            document.documentElement.dataset.language = 'en';
+            document.documentElement.lang = 'en';
         }
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -22,25 +26,33 @@
 
 <body class="min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
 
-    <button id="themeToggleBtn" type="button" class="theme-toggle" aria-label="切换到暗色主题" aria-pressed="false"
-        title="切换到暗色主题">
-        <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-        </svg>
-        <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            aria-hidden="true">
-            <circle cx="12" cy="12" r="4" stroke-width="2" />
-            <path stroke-linecap="round" stroke-width="2"
-                d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3l1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3l1.42-1.42" />
-        </svg>
-    </button>
+    <div class="top-controls">
+        <button id="languageToggleBtn" type="button" class="language-toggle" aria-label="Switch to Chinese"
+            aria-pressed="false" title="Switch to Chinese">
+            <span id="languageToggleText" aria-hidden="true">EN</span>
+        </button>
+        <button id="themeToggleBtn" type="button" class="theme-toggle" aria-label="Switch to dark theme"
+            aria-pressed="false" title="Switch to dark theme">
+            <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+            </svg>
+            <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                aria-hidden="true">
+                <circle cx="12" cy="12" r="4" stroke-width="2" />
+                <path stroke-linecap="round" stroke-width="2"
+                    d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3l1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3l1.42-1.42" />
+            </svg>
+        </button>
+    </div>
 
     <div class="glass-card rounded-2xl w-full max-w-4xl p-6 md:p-10 animate-slide-up">
         <header class="mb-8 text-center">
-            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">高性能在线图片工具</h1>
-            <p class="text-gray-600 mt-2">在浏览器中安全快速地压缩和转换您的图片。</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800" data-i18n="app.heading">High-Performance
+                Online Image Tool</h1>
+            <p class="text-gray-600 mt-2" data-i18n="app.subtitle">Compress and convert images quickly and
+                securely in your browser.</p>
         </header>
 
         <section id="uploadSection" class="mb-8">
@@ -54,10 +66,13 @@
                             d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                     </svg>
                 </div>
-                <p class="text-lg font-medium text-gray-700">将图片拖拽至此，或 <span
-                        class="text-blue-600 hover:text-blue-800">点击选择文件</span></p>
-                <p class="text-sm text-gray-500 mt-1">支持 JPG, PNG, GIF, BMP, WebP 格式</p>
-                <p class="text-xs text-gray-500 mt-1">提示：动画GIF将仅处理第一帧进行压缩/转换。</p>
+                <p class="text-lg font-medium text-gray-700"><span data-i18n="upload.drop">Drop images here, or</span>
+                    <span class="text-blue-600 hover:text-blue-800" data-i18n="upload.choose">choose files</span>
+                </p>
+                <p class="text-sm text-gray-500 mt-1" data-i18n="upload.formats">Supports JPG, PNG, GIF, BMP and
+                    WebP</p>
+                <p class="text-xs text-gray-500 mt-1" data-i18n="upload.gifNote">Animated GIFs are processed using
+                    the first frame only.</p>
             </div>
         </section>
     </div>
@@ -70,69 +85,73 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                     </svg>
-                    压缩设置
+                    <span data-i18n="settings.title">Compression Settings</span>
                 </h2>
-                <fieldset class="compression-modes" aria-label="压缩模式">
-                    <legend class="sr-only">压缩模式</legend>
+                <fieldset class="compression-modes" aria-label="Compression mode"
+                    data-i18n-aria-label="settings.modeLegend">
+                    <legend class="sr-only" data-i18n="settings.modeLegend">Compression mode</legend>
                     <label class="mode-option">
                         <input type="radio" id="modeCustom" name="compressionMode" value="custom" checked>
-                        <span>自定义</span>
+                        <span data-i18n="modes.custom">Custom</span>
                     </label>
                     <label class="mode-option">
                         <input type="radio" id="modeShrink" name="compressionMode" value="shrink">
-                        <span>缩小优先</span>
+                        <span data-i18n="modes.shrink">Smaller Size</span>
                     </label>
                     <label class="mode-option">
                         <input type="radio" id="modeNormal" name="compressionMode" value="normal">
-                        <span>普通压缩</span>
+                        <span data-i18n="modes.normal">Balanced</span>
                     </label>
                     <label class="mode-option">
                         <input type="radio" id="modeClear" name="compressionMode" value="clear">
-                        <span>清晰优先</span>
+                        <span data-i18n="modes.clear">High Quality</span>
                     </label>
                 </fieldset>
             </div>
 
             <div class="settings-content">
                 <div id="customSettingsPanel" class="settings-panel">
-                    <h3 class="sr-only">自定义参数</h3>
+                    <h3 class="sr-only" data-i18n="settings.customParams">Custom parameters</h3>
                     <div class="custom-settings-grid">
                         <div class="setting-field setting-quality">
                             <div class="setting-label-row">
-                                <label for="qualitySlider">图片质量</label>
+                                <label for="qualitySlider" data-i18n="settings.quality">Image quality</label>
                                 <output id="qualityValue" for="qualitySlider">0.8</output>
                             </div>
                             <input type="range" id="qualitySlider" min="0.1" max="1" step="0.05" value="0.8">
-                            <p>数值越小，图片体积越小。</p>
+                            <p data-i18n="settings.qualityHint">Lower values produce smaller files.</p>
                         </div>
 
                         <div class="setting-field setting-size">
-                            <span class="setting-label">最大尺寸 (px)</span>
+                            <span class="setting-label" data-i18n="settings.maxSize">Maximum size (px)</span>
                             <div class="dimension-inputs">
                                 <label>
-                                    <span>宽</span>
+                                    <span data-i18n="settings.width">Width</span>
                                     <input type="number" id="maxWidthInput" min="1" max="20000" step="1"
-                                        placeholder="1920" aria-label="最大宽度">
+                                        placeholder="1920" aria-label="Maximum width"
+                                        data-i18n-aria-label="settings.maxWidthAria">
                                 </label>
                                 <span class="dimension-separator" aria-hidden="true">×</span>
                                 <label>
-                                    <span>高</span>
+                                    <span data-i18n="settings.height">Height</span>
                                     <input type="number" id="maxHeightInput" min="1" max="20000" step="1"
-                                        placeholder="1080" aria-label="最大高度">
+                                        placeholder="1080" aria-label="Maximum height"
+                                        data-i18n-aria-label="settings.maxHeightAria">
                                 </label>
                             </div>
-                            <p>留空则保持原始尺寸。</p>
+                            <p data-i18n="settings.sizeHint">Leave blank to keep the original size.</p>
                         </div>
 
                         <div class="setting-field setting-format">
-                            <label for="outputFormatSelect" class="setting-label">输出格式</label>
+                            <label for="outputFormatSelect" class="setting-label" data-i18n="settings.outputFormat">Output
+                                format</label>
                             <select id="outputFormatSelect">
                                 <option value="image/jpeg">JPG</option>
                                 <option value="image/png">PNG</option>
                                 <option value="image/webp">WebP</option>
-                                <option value="original">保持原格式</option>
+                                <option value="original" data-i18n="settings.keepOriginal">Keep original format</option>
                             </select>
-                            <p>GIF 将输出为静态图片。</p>
+                            <p data-i18n="settings.gifOutput">GIF files are exported as static images.</p>
                         </div>
                     </div>
                 </div>
@@ -140,13 +159,13 @@
                 <div id="shrinkSettingsPanel" class="settings-panel hidden">
                     <div class="preset-summary">
                         <div class="preset-description">
-                            <h3>缩小优先</h3>
-                            <p>适合网页图片和快速加载场景。</p>
+                            <h3 data-i18n="modes.shrink">Smaller Size</h3>
+                            <p data-i18n="presets.shrinkDescription">Best for web images and faster loading.</p>
                         </div>
                         <dl class="preset-metrics">
-                            <div><dt>质量</dt><dd>0.6</dd></div>
-                            <div><dt>最大尺寸</dt><dd>1280 × 720</dd></div>
-                            <div><dt>格式</dt><dd>JPG</dd></div>
+                            <div><dt data-i18n="metrics.quality">Quality</dt><dd>0.6</dd></div>
+                            <div><dt data-i18n="metrics.maxSize">Maximum size</dt><dd>1280 × 720</dd></div>
+                            <div><dt data-i18n="metrics.format">Format</dt><dd>JPG</dd></div>
                         </dl>
                     </div>
                 </div>
@@ -154,13 +173,13 @@
                 <div id="normalSettingsPanel" class="settings-panel hidden">
                     <div class="preset-summary">
                         <div class="preset-description">
-                            <h3>普通压缩</h3>
-                            <p>兼顾图片质量与文件体积。</p>
+                            <h3 data-i18n="modes.normal">Balanced</h3>
+                            <p data-i18n="presets.normalDescription">Balances image quality and file size.</p>
                         </div>
                         <dl class="preset-metrics">
-                            <div><dt>质量</dt><dd>0.75</dd></div>
-                            <div><dt>最大尺寸</dt><dd>1920 × 1080</dd></div>
-                            <div><dt>格式</dt><dd>JPG</dd></div>
+                            <div><dt data-i18n="metrics.quality">Quality</dt><dd>0.75</dd></div>
+                            <div><dt data-i18n="metrics.maxSize">Maximum size</dt><dd>1920 × 1080</dd></div>
+                            <div><dt data-i18n="metrics.format">Format</dt><dd>JPG</dd></div>
                         </dl>
                     </div>
                 </div>
@@ -168,13 +187,13 @@
                 <div id="clearSettingsPanel" class="settings-panel hidden">
                     <div class="preset-summary">
                         <div class="preset-description">
-                            <h3>清晰优先</h3>
-                            <p>适合需要保留细节的展示图片。</p>
+                            <h3 data-i18n="modes.clear">High Quality</h3>
+                            <p data-i18n="presets.clearDescription">Best for display images that need to retain detail.</p>
                         </div>
                         <dl class="preset-metrics">
-                            <div><dt>质量</dt><dd>0.9</dd></div>
-                            <div><dt>尺寸</dt><dd>保持原尺寸</dd></div>
-                            <div><dt>格式</dt><dd>WebP</dd></div>
+                            <div><dt data-i18n="metrics.quality">Quality</dt><dd>0.9</dd></div>
+                            <div><dt data-i18n="metrics.size">Size</dt><dd data-i18n="metrics.keepOriginal">Keep original</dd></div>
+                            <div><dt data-i18n="metrics.format">Format</dt><dd>WebP</dd></div>
                         </dl>
                     </div>
                 </div>
@@ -184,8 +203,8 @@
 
     <section id="processingSection" class="collapsible-section mb-8 hidden animate-fade-in w-full max-w-4xl">
         <div id="processingHeader" class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-semibold text-gray-700">待处理文件</h2>
-            <button id="startProcessingBtn" class="btn btn-primary">全部开始处理</button>
+            <h2 class="text-xl font-semibold text-gray-700" data-i18n="processing.title">Pending Files</h2>
+            <button id="startProcessingBtn" class="btn btn-primary" data-i18n="processing.startAll">Process All</button>
         </div>
 
         <div id="pendingFileListContainer"
@@ -198,10 +217,11 @@
     <section id="previewSection" class="collapsible-section mb-8 hidden animate-fade-in w-full max-w-4xl">
         <div id="previewArea" class="bg-gray-50 p-4 rounded-lg">
             <div class="preview-header">
-                <h3 class="preview-heading text-lg font-semibold text-gray-700">图片预览: <span id="previewFileName"
+                <h3 class="preview-heading text-lg font-semibold text-gray-700"><span
+                        data-i18n="preview.title">Image Preview:</span> <span id="previewFileName"
                         class="text-base font-normal"></span></h3>
-                <button id="closePreviewBtn" type="button" class="preview-close-btn" aria-label="关闭预览"
-                    title="关闭预览">
+                <button id="closePreviewBtn" type="button" class="preview-close-btn" aria-label="Close preview"
+                    title="Close preview" data-i18n-aria-label="preview.close" data-i18n-title="preview.close">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 6l12 12M18 6L6 18" />
                     </svg>
@@ -209,22 +229,25 @@
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                 <div class="preview-container">
-                    <h4 class="text-center text-sm font-medium text-gray-600">处理前</h4>
+                    <h4 class="text-center text-sm font-medium text-gray-600" data-i18n="preview.before">Before</h4>
                     <div class="preview-media">
-                        <img id="previewOriginal" alt="处理前图片" class="preview-image mx-auto">
+                        <img id="previewOriginal" alt="Original image" class="preview-image mx-auto"
+                            data-i18n-alt="preview.originalAlt">
                     </div>
                     <div class="preview-meta">
                         <p id="previewOriginalSize" class="text-center text-xs text-gray-500 mt-1"></p>
                     </div>
                 </div>
                 <div class="preview-container">
-                    <h4 class="text-center text-sm font-medium text-gray-600">处理后</h4>
+                    <h4 class="text-center text-sm font-medium text-gray-600" data-i18n="preview.after">After</h4>
                     <div class="preview-media">
-                        <img id="previewProcessed" alt="处理后图片" class="preview-image mx-auto hidden">
+                        <img id="previewProcessed" alt="Processed image" class="preview-image mx-auto hidden"
+                            data-i18n-alt="preview.processedAlt">
                         <div id="previewProcessedPlaceholder" class="preview-generated-placeholder" role="img"
-                            aria-label="图片等待处理">
+                            aria-label="Image waiting to be processed">
                             <div id="previewPlaceholderArt" class="placeholder-art" aria-hidden="true"></div>
-                            <span id="previewPlaceholderLabel" class="placeholder-label">等待处理</span>
+                            <span id="previewPlaceholderLabel" class="placeholder-label"
+                                data-i18n="preview.waiting">Waiting</span>
                         </div>
                     </div>
                     <div class="preview-meta">
@@ -238,7 +261,7 @@
 
     <section id="resultsSection" class="hidden animate-fade-in w-full max-w-4xl">
         <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-semibold text-gray-700">处理结果</h2>
+            <h2 class="text-xl font-semibold text-gray-700" data-i18n="results.title">Results</h2>
             <div class="space-x-2">
                 <button id="clearResultsBtn" class="btn btn-outline">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-1" viewBox="0 0 20 20"
@@ -247,7 +270,7 @@
                             d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
                             clip-rule="evenodd" />
                     </svg>
-                    清除结果
+                    <span data-i18n="results.clear">Clear Results</span>
                 </button>
                 <button id="batchDownloadBtn" class="btn btn-secondary hidden">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-1" viewBox="0 0 20 20"
@@ -256,7 +279,7 @@
                             d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
                             clip-rule="evenodd" />
                     </svg>
-                    批量下载 (.zip)
+                    <span data-i18n="results.batchDownload">Download All (.zip)</span>
                 </button>
             </div>
         </div>
@@ -269,7 +292,8 @@
     </div>
 
     <footer class="mt-12 text-center">
-        <p class="text-sm text-gray-500">&copy; <span id="currentYear"></span> 高性能在线图片转换工具</p>
+        <p class="text-sm text-gray-500">&copy; <span id="currentYear"></span> <span
+                data-i18n="footer.product">High-Performance Online Image Tool</span></p>
     </footer>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>

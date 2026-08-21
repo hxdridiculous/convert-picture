@@ -221,11 +221,19 @@ body {
     animation: messageOut var(--motion-fast) ease-in both;
 }
 
-.theme-toggle {
+.top-controls {
     position: absolute;
     z-index: 50;
     top: max(1rem, env(safe-area-inset-top));
     right: max(1rem, env(safe-area-inset-right));
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+}
+
+.theme-toggle,
+.language-toggle {
+    position: relative;
     width: 2.75rem;
     height: 2.75rem;
     border: 1px solid var(--color-border-strong);
@@ -242,17 +250,26 @@ body {
         transform var(--motion-fast) var(--motion-ease);
 }
 
-.theme-toggle:hover {
+.language-toggle {
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.theme-toggle:hover,
+.language-toggle:hover {
     color: var(--color-primary-hover);
     border-color: var(--color-primary);
     transform: translateY(-1px);
 }
 
-.theme-toggle:active {
+.theme-toggle:active,
+.language-toggle:active {
     transform: scale(0.96);
 }
 
-.theme-toggle:focus-visible {
+.theme-toggle:focus-visible,
+.language-toggle:focus-visible {
     outline: 3px solid rgba(53, 171, 212, 0.3);
     outline-offset: 2px;
 }
@@ -1319,9 +1336,14 @@ html[data-theme="dark"] option {
         padding-top: 4rem !important;
     }
 
-    .theme-toggle {
+    .top-controls {
         top: max(0.75rem, env(safe-area-inset-top));
         right: max(0.75rem, env(safe-area-inset-right));
+        gap: 0.5rem;
+    }
+
+    .theme-toggle,
+    .language-toggle {
         width: 2.5rem;
         height: 2.5rem;
     }

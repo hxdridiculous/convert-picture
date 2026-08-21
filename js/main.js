@@ -1,6 +1,8 @@
 // --- DOM Elements ---
 const uploadArea = document.getElementById('uploadArea');
 const fileInput = document.getElementById('fileInput');
+const languageToggleBtn = document.getElementById('languageToggleBtn');
+const languageToggleText = document.getElementById('languageToggleText');
 const themeToggleBtn = document.getElementById('themeToggleBtn');
 const settingsSection = document.getElementById('settingsSection');
 const processingSection = document.getElementById('processingSection');
@@ -36,6 +38,10 @@ let selectedPreviewId = null;
 let isProcessing = false;
 let processingCancelled = false;
 let currentProcessingId = null;
+let currentProcessingMode = null;
+let currentProcessingPosition = 0;
+let currentProcessingTotal = 0;
+let currentLanguage = document.documentElement.dataset.language === 'zh' ? 'zh' : 'en';
 const animatedPendingFileIds = new Set();
 const animatedResultFileIds = new Set();
 const sectionHideTimers = new WeakMap();
@@ -50,6 +56,205 @@ const COMPRESSION_PRESETS = {
     clear: { quality: 0.9, mimeType: 'image/webp' }
 };
 const THEME_STORAGE_KEY = 'convertPictureTheme';
+const LANGUAGE_STORAGE_KEY = 'convertPictureLanguage';
+const TRANSLATIONS = {
+    en: {
+        'app.title': 'High-Performance Online Image Tool',
+        'app.heading': 'High-Performance Online Image Tool',
+        'app.subtitle': 'Compress and convert images quickly and securely in your browser.',
+        'theme.switchToLight': 'Switch to light theme',
+        'theme.switchToDark': 'Switch to dark theme',
+        'language.switchToChinese': 'Switch to Chinese',
+        'language.switchToEnglish': 'Switch to English',
+        'upload.drop': 'Drop images here, or',
+        'upload.choose': 'choose files',
+        'upload.formats': 'Supports JPG, PNG, GIF, BMP and WebP',
+        'upload.gifNote': 'Animated GIFs are processed using the first frame only.',
+        'settings.title': 'Compression Settings',
+        'settings.modeLegend': 'Compression mode',
+        'settings.customParams': 'Custom parameters',
+        'settings.quality': 'Image quality',
+        'settings.qualityHint': 'Lower values produce smaller files.',
+        'settings.maxSize': 'Maximum size (px)',
+        'settings.width': 'Width',
+        'settings.height': 'Height',
+        'settings.maxWidthAria': 'Maximum width',
+        'settings.maxHeightAria': 'Maximum height',
+        'settings.sizeHint': 'Leave blank to keep the original size.',
+        'settings.outputFormat': 'Output format',
+        'settings.keepOriginal': 'Keep original format',
+        'settings.gifOutput': 'GIF files are exported as static images.',
+        'modes.custom': 'Custom',
+        'modes.shrink': 'Smaller Size',
+        'modes.normal': 'Balanced',
+        'modes.clear': 'High Quality',
+        'presets.shrinkDescription': 'Best for web images and faster loading.',
+        'presets.normalDescription': 'Balances image quality and file size.',
+        'presets.clearDescription': 'Best for display images that need to retain detail.',
+        'metrics.quality': 'Quality',
+        'metrics.maxSize': 'Maximum size',
+        'metrics.format': 'Format',
+        'metrics.size': 'Size',
+        'metrics.keepOriginal': 'Keep original',
+        'processing.title': 'Pending Files',
+        'processing.startAll': 'Process All',
+        'processing.progress': 'Processing progress: {progress}%',
+        'processing.previewFile': 'Preview {file}',
+        'processing.startFile': 'Process {file}',
+        'processing.processing': 'Processing',
+        'processing.start': 'Process',
+        'processing.removeFile': 'Remove {file}',
+        'processing.remove': 'Remove',
+        'processing.waitBeforeRemove': 'Wait for the current task to finish before removing files.',
+        'processing.stopping': 'Stopping...',
+        'processing.stopAfterCurrent': 'Processing will stop after the current image finishes.',
+        'processing.alreadyRunning': 'An image is already being processed.',
+        'processing.nonePending': 'There are no pending files.',
+        'processing.stopAll': 'Stop All ({current}/{total})',
+        'processing.stopCurrent': 'Stop Current',
+        'processing.stopped': 'Processing stopped. Remaining files are still pending.',
+        'processing.singleDone': '{file} processed successfully.',
+        'processing.finishedWithErrors': 'Finished: {success} succeeded, {failure} failed.',
+        'processing.allDone': 'All files have been processed.',
+        'preview.title': 'Image Preview:',
+        'preview.close': 'Close preview',
+        'preview.before': 'Before',
+        'preview.after': 'After',
+        'preview.originalAlt': 'Original image',
+        'preview.processedAlt': 'Processed image',
+        'preview.waiting': 'Waiting',
+        'preview.unavailable': 'Preview unavailable',
+        'preview.loadFailed': 'After: preview failed to load',
+        'preview.originalSize': 'Original: {size}',
+        'preview.processedSize': 'After: {size}',
+        'preview.pendingSize': 'After: -',
+        'preview.savings': 'Saved: {value}%',
+        'preview.increase': 'Increased: {value}%',
+        'preview.unchanged': 'Size unchanged',
+        'results.title': 'Results',
+        'results.clear': 'Clear Results',
+        'results.batchDownload': 'Download All (.zip)',
+        'results.empty': 'No files have been processed yet.',
+        'results.waiting': 'All files are pending or being processed.',
+        'results.savings': 'Saved {value}%',
+        'results.increase': 'Increased {value}%',
+        'results.unchanged': 'Size unchanged',
+        'results.error': 'Error: {message}',
+        'results.unknownError': 'Unknown error',
+        'results.download': 'Download',
+        'results.retry': 'Retry',
+        'results.preview': 'Preview',
+        'results.remove': 'Remove',
+        'messages.skippedUnsupported': 'Skipped {count} unsupported file(s).',
+        'messages.resultsCleared': 'All results have been cleared.',
+        'errors.imageLoad': 'Unable to load the image.',
+        'errors.resize': 'Unable to resize the image.',
+        'errors.processing': 'Unable to process the image.',
+        'zip.none': 'There are no processed files to download.',
+        'zip.preparing': 'Preparing the ZIP file...',
+        'zip.ready': 'The ZIP file is ready. Download started.',
+        'zip.error': 'Unable to create the ZIP file.',
+        'footer.product': 'High-Performance Online Image Tool'
+    },
+    zh: {
+        'app.title': '高性能在线图片工具',
+        'app.heading': '高性能在线图片工具',
+        'app.subtitle': '在浏览器中安全快速地压缩和转换您的图片。',
+        'theme.switchToLight': '切换到亮色主题',
+        'theme.switchToDark': '切换到暗色主题',
+        'language.switchToChinese': '切换为中文',
+        'language.switchToEnglish': '切换为英文',
+        'upload.drop': '将图片拖拽至此，或',
+        'upload.choose': '点击选择文件',
+        'upload.formats': '支持 JPG、PNG、GIF、BMP 和 WebP 格式',
+        'upload.gifNote': '动画 GIF 将仅处理第一帧。',
+        'settings.title': '压缩设置',
+        'settings.modeLegend': '压缩模式',
+        'settings.customParams': '自定义参数',
+        'settings.quality': '图片质量',
+        'settings.qualityHint': '数值越小，图片体积越小。',
+        'settings.maxSize': '最大尺寸 (px)',
+        'settings.width': '宽',
+        'settings.height': '高',
+        'settings.maxWidthAria': '最大宽度',
+        'settings.maxHeightAria': '最大高度',
+        'settings.sizeHint': '留空则保持原始尺寸。',
+        'settings.outputFormat': '输出格式',
+        'settings.keepOriginal': '保持原格式',
+        'settings.gifOutput': 'GIF 将输出为静态图片。',
+        'modes.custom': '自定义',
+        'modes.shrink': '缩小优先',
+        'modes.normal': '普通压缩',
+        'modes.clear': '清晰优先',
+        'presets.shrinkDescription': '适合网页图片和快速加载场景。',
+        'presets.normalDescription': '兼顾图片质量与文件体积。',
+        'presets.clearDescription': '适合需要保留细节的展示图片。',
+        'metrics.quality': '质量',
+        'metrics.maxSize': '最大尺寸',
+        'metrics.format': '格式',
+        'metrics.size': '尺寸',
+        'metrics.keepOriginal': '保持原尺寸',
+        'processing.title': '待处理文件',
+        'processing.startAll': '全部开始处理',
+        'processing.progress': '处理进度：{progress}%',
+        'processing.previewFile': '预览 {file}',
+        'processing.startFile': '开始处理 {file}',
+        'processing.processing': '处理中',
+        'processing.start': '开始处理',
+        'processing.removeFile': '移除 {file}',
+        'processing.remove': '移除',
+        'processing.waitBeforeRemove': '请等待当前处理任务结束后再移除文件。',
+        'processing.stopping': '正在停止...',
+        'processing.stopAfterCurrent': '将在当前图片处理完成后停止。',
+        'processing.alreadyRunning': '已有图片正在处理。',
+        'processing.nonePending': '没有待处理的文件。',
+        'processing.stopAll': '停止全部 ({current}/{total})',
+        'processing.stopCurrent': '停止当前处理',
+        'processing.stopped': '已停止处理，剩余文件仍在待处理列表。',
+        'processing.singleDone': '{file} 处理完成。',
+        'processing.finishedWithErrors': '处理结束：{success} 个成功，{failure} 个失败。',
+        'processing.allDone': '全部文件处理完成。',
+        'preview.title': '图片预览：',
+        'preview.close': '关闭预览',
+        'preview.before': '处理前',
+        'preview.after': '处理后',
+        'preview.originalAlt': '处理前图片',
+        'preview.processedAlt': '处理后图片',
+        'preview.waiting': '等待处理',
+        'preview.unavailable': '预览不可用',
+        'preview.loadFailed': '处理后：预览加载失败',
+        'preview.originalSize': '原始大小：{size}',
+        'preview.processedSize': '处理后：{size}',
+        'preview.pendingSize': '处理后：-',
+        'preview.savings': '节省：{value}%',
+        'preview.increase': '增大：{value}%',
+        'preview.unchanged': '大小不变',
+        'results.title': '处理结果',
+        'results.clear': '清除结果',
+        'results.batchDownload': '批量下载 (.zip)',
+        'results.empty': '还没有处理完成的文件。',
+        'results.waiting': '所有文件正在等待处理或处理中。',
+        'results.savings': '节省 {value}%',
+        'results.increase': '增大 {value}%',
+        'results.unchanged': '大小不变',
+        'results.error': '错误：{message}',
+        'results.unknownError': '未知错误',
+        'results.download': '下载',
+        'results.retry': '重试',
+        'results.preview': '预览',
+        'results.remove': '移除',
+        'messages.skippedUnsupported': '已跳过 {count} 个不支持的文件。',
+        'messages.resultsCleared': '已清除所有处理结果。',
+        'errors.imageLoad': '图片加载失败。',
+        'errors.resize': '图片缩放失败。',
+        'errors.processing': '图片处理失败。',
+        'zip.none': '没有可下载的已处理文件。',
+        'zip.preparing': '正在准备 ZIP 文件...',
+        'zip.ready': 'ZIP 文件已准备好，开始下载。',
+        'zip.error': '创建 ZIP 文件失败。',
+        'footer.product': '高性能在线图片工具'
+    }
+};
 const PLACEHOLDER_PATTERNS = [
     [
         ['frame', 8, 12, 72, 64],
@@ -82,6 +287,80 @@ const PLACEHOLDER_PATTERNS = [
 ];
 
 // --- Utility Functions ---
+function t(key, params = {}) {
+    const template = TRANSLATIONS[currentLanguage][key] ?? TRANSLATIONS.en[key] ?? key;
+    return template.replace(/\{(\w+)\}/g, (match, name) => params[name] ?? match);
+}
+
+function createTranslatedError(key) {
+    const error = new Error(key);
+    error.translationKey = key;
+    return error;
+}
+
+function applyStaticTranslations() {
+    document.querySelectorAll('[data-i18n]').forEach(element => {
+        element.textContent = t(element.dataset.i18n);
+    });
+
+    const translatedAttributes = {
+        'data-i18n-aria-label': 'aria-label',
+        'data-i18n-title': 'title',
+        'data-i18n-placeholder': 'placeholder',
+        'data-i18n-alt': 'alt'
+    };
+
+    Object.entries(translatedAttributes).forEach(([dataAttribute, targetAttribute]) => {
+        document.querySelectorAll(`[${dataAttribute}]`).forEach(element => {
+            element.setAttribute(targetAttribute, t(element.getAttribute(dataAttribute)));
+        });
+    });
+}
+
+function updateLanguageToggleState() {
+    const isChinese = currentLanguage === 'zh';
+    const label = isChinese ? t('language.switchToEnglish') : t('language.switchToChinese');
+    languageToggleText.textContent = isChinese ? '中' : 'EN';
+    languageToggleBtn.setAttribute('aria-label', label);
+    languageToggleBtn.setAttribute('aria-pressed', String(isChinese));
+    languageToggleBtn.title = label;
+}
+
+function setLanguage(language, persist = false) {
+    const nextLanguage = language === 'zh' ? 'zh' : 'en';
+    const languageChanged = currentLanguage !== nextLanguage;
+    currentLanguage = nextLanguage;
+    document.documentElement.dataset.language = nextLanguage;
+    document.documentElement.lang = nextLanguage === 'zh' ? 'zh-CN' : 'en';
+
+    applyStaticTranslations();
+    updateLanguageToggleState();
+    updateThemeToggleState();
+    updateProcessingButtonState();
+    renderFileList();
+    renderProcessedFileList();
+
+    if (selectedPreviewId) {
+        selectForPreview(selectedPreviewId);
+    }
+
+    if (languageChanged) {
+        messageArea.replaceChildren();
+    }
+
+    if (persist) {
+        try {
+            localStorage.setItem(LANGUAGE_STORAGE_KEY, nextLanguage);
+        } catch (error) {
+            console.warn('Unable to save language preference:', error);
+        }
+    }
+}
+
+function toggleLanguage() {
+    setLanguage(currentLanguage === 'en' ? 'zh' : 'en', true);
+}
+
 function generateId() {
     return Math.random().toString(36).substr(2, 9);
 }
@@ -130,7 +409,7 @@ function createPlaceholderPattern() {
     return Math.floor(Math.random() * PLACEHOLDER_PATTERNS.length);
 }
 
-function renderProcessedPlaceholder(patternIndex, label = '等待处理', isError = false) {
+function renderProcessedPlaceholder(patternIndex, label = t('preview.waiting'), isError = false) {
     const pattern = PLACEHOLDER_PATTERNS[patternIndex] || PLACEHOLDER_PATTERNS[0];
     const fragment = document.createDocumentFragment();
 
@@ -158,8 +437,8 @@ function showProcessedPreview(fileData) {
     previewProcessedPlaceholder.classList.add('hidden');
     previewProcessedImg.classList.remove('hidden');
     previewProcessedImg.onerror = () => {
-        renderProcessedPlaceholder(fileData.placeholderPattern, '预览不可用', true);
-        previewProcessedSize.textContent = '处理后: 预览加载失败';
+        renderProcessedPlaceholder(fileData.placeholderPattern, t('preview.unavailable'), true);
+        previewProcessedSize.textContent = t('preview.loadFailed');
         previewSavings.textContent = '';
     };
     previewProcessedImg.src = fileData.processedURL;
@@ -206,7 +485,7 @@ function setCollapsibleSectionVisibility(section, shouldShow) {
 
 function updateThemeToggleState() {
     const isDarkTheme = document.documentElement.dataset.theme === 'dark';
-    const label = isDarkTheme ? '切换到亮色主题' : '切换到暗色主题';
+    const label = isDarkTheme ? t('theme.switchToLight') : t('theme.switchToDark');
     themeToggleBtn.setAttribute('aria-label', label);
     themeToggleBtn.setAttribute('aria-pressed', String(isDarkTheme));
     themeToggleBtn.title = label;
@@ -247,7 +526,7 @@ function handleFiles(files) {
     const skippedCount = files.length - validFiles.length;
 
     if (skippedCount > 0) {
-        showMessage('error', `已跳过 ${skippedCount} 个不支持的文件`);
+        showMessage('error', t('messages.skippedUnsupported', { count: skippedCount }));
     }
 
     if (validFiles.length === 0) {
@@ -289,19 +568,22 @@ function renderFileList() {
             animatedPendingFileIds.add(f.id);
         }
         const safeFileName = escapeHtml(f.file.name);
+        const previewFileLabel = escapeHtml(t('processing.previewFile', { file: f.file.name }));
+        const startFileLabel = escapeHtml(t('processing.startFile', { file: f.file.name }));
+        const removeFileLabel = escapeHtml(t('processing.removeFile', { file: f.file.name }));
         const progress = Math.max(0, Math.min(100, Number(f.progress) || 0));
         const isCurrentFile = f.status === 'processing' && currentProcessingId === f.id;
         const disableRowActions = isProcessing ? 'disabled' : '';
 
         const stateHtml = f.status === 'processing'
-            ? `<div class="file-progress" aria-label="处理进度 ${progress}%">
+            ? `<div class="file-progress" aria-label="${escapeHtml(t('processing.progress', { progress }))}">
                     <div class="progress-bar-container"><div class="progress-bar" style="width: ${progress}%"></div></div>
                     <span>${progress}%</span>
                 </div>`
             : '';
 
         li.innerHTML = `
-            <button type="button" class="file-preview-trigger" aria-label="预览 ${safeFileName}" title="预览 ${safeFileName}">
+            <button type="button" class="file-preview-trigger" aria-label="${previewFileLabel}" title="${previewFileLabel}">
                 <span class="file-thumbnail-wrap"><img class="file-thumbnail" alt=""></span>
                 <span class="min-w-0">
                     <span class="file-name block text-sm font-semibold text-gray-800 truncate">${safeFileName}</span>
@@ -311,9 +593,9 @@ function renderFileList() {
             ${stateHtml}
             <div class="file-row-actions">
                 <button type="button" class="btn-process btn btn-primary btn-row" ${disableRowActions}
-                    aria-label="开始处理 ${safeFileName}">${isCurrentFile ? '处理中' : '开始处理'}</button>
+                    aria-label="${startFileLabel}">${isCurrentFile ? t('processing.processing') : t('processing.start')}</button>
                 <button type="button" class="btn-remove btn btn-danger btn-row" ${disableRowActions}
-                    aria-label="移除 ${safeFileName}">移除</button>
+                    aria-label="${removeFileLabel}">${t('processing.remove')}</button>
             </div>
         `;
         li.querySelector('.file-thumbnail').src = f.originalURL;
@@ -360,7 +642,7 @@ function updateProcessingSectionState() {
 function removeFile(id) {
     const fileToRemove = uploadedFiles.find(f => f.id === id);
     if (isProcessing) {
-        showMessage('info', '请等待当前处理任务结束后再移除文件');
+        showMessage('info', t('processing.waitBeforeRemove'));
         return;
     }
     if (fileToRemove) {
@@ -389,18 +671,22 @@ function selectForPreview(id) {
         selectedPreviewId = id;
         previewFileName.textContent = fileData.file.name;
         previewOriginalImg.src = fileData.originalURL;
-        previewOriginalSize.textContent = `原始大小: ${formatBytes(fileData.originalSize)}`;
+        previewOriginalSize.textContent = t('preview.originalSize', { size: formatBytes(fileData.originalSize) });
 
         if (fileData.processedURL && fileData.processedSize) {
             showProcessedPreview(fileData);
-            previewProcessedSize.textContent = `处理后: ${formatBytes(fileData.processedSize)}`;
+            previewProcessedSize.textContent = t('preview.processedSize', { size: formatBytes(fileData.processedSize) });
             const savings = ((fileData.originalSize - fileData.processedSize) / fileData.originalSize) * 100;
-            previewSavings.textContent = savings > 0 ? `节省: ${savings.toFixed(1)}%` : (savings < 0 ? `增大: ${Math.abs(savings).toFixed(1)}%` : '大小不变');
+            previewSavings.textContent = savings > 0
+                ? t('preview.savings', { value: savings.toFixed(1) })
+                : (savings < 0
+                    ? t('preview.increase', { value: Math.abs(savings).toFixed(1) })
+                    : t('preview.unchanged'));
             previewSavings.className = `text-center text-sm font-semibold mt-1 ${savings > 0 ? 'text-green-600' : (savings < 0 ? 'text-red-600' : 'text-gray-600')}`;
 
         } else {
             renderProcessedPlaceholder(fileData.placeholderPattern);
-            previewProcessedSize.textContent = '处理后: -';
+            previewProcessedSize.textContent = t('preview.pendingSize');
             previewSavings.textContent = '';
         }
 
@@ -430,7 +716,7 @@ clearResultsBtn.addEventListener('click', () => {
         clearPreview();
     }
 
-    showMessage('info', '已清除所有处理结果');
+    showMessage('info', t('messages.resultsCleared'));
 
     // 如果还有待处理文件，显示处理区域
     if (uploadedFiles.length > 0) {
@@ -502,28 +788,50 @@ function animatePendingFileExit(id) {
     });
 }
 
+function updateProcessingButtonState() {
+    if (processingCancelled) {
+        startProcessingBtn.textContent = t('processing.stopping');
+        return;
+    }
+
+    if (isProcessing) {
+        startProcessingBtn.textContent = currentProcessingMode === 'all'
+            ? t('processing.stopAll', {
+                current: currentProcessingPosition,
+                total: currentProcessingTotal
+            })
+            : t('processing.stopCurrent');
+        return;
+    }
+
+    startProcessingBtn.textContent = t('processing.startAll');
+}
+
 function requestProcessingCancellation() {
     processingCancelled = true;
     startProcessingBtn.disabled = true;
-    startProcessingBtn.textContent = '正在停止...';
-    showMessage('info', '将在当前图片处理完成后停止');
+    updateProcessingButtonState();
+    showMessage('info', t('processing.stopAfterCurrent'));
     renderFileList();
 }
 
 async function runProcessingQueue(requestedFiles, mode) {
     if (isProcessing) {
-        showMessage('info', '已有图片正在处理');
+        showMessage('info', t('processing.alreadyRunning'));
         return;
     }
 
     const filesToProcess = requestedFiles.filter(file => file.status === 'pending' && uploadedFiles.includes(file));
     if (filesToProcess.length === 0) {
-        showMessage('error', '没有待处理的文件');
+        showMessage('error', t('processing.nonePending'));
         return;
     }
 
     isProcessing = true;
     processingCancelled = false;
+    currentProcessingMode = mode;
+    currentProcessingPosition = 0;
+    currentProcessingTotal = filesToProcess.length;
     let successCount = 0;
     let failureCount = 0;
 
@@ -531,10 +839,9 @@ async function runProcessingQueue(requestedFiles, mode) {
         if (processingCancelled) break;
         const fileObj = filesToProcess[index];
         currentProcessingId = fileObj.id;
+        currentProcessingPosition = index + 1;
         startProcessingBtn.disabled = false;
-        startProcessingBtn.textContent = mode === 'all'
-            ? `停止全部 (${index + 1}/${filesToProcess.length})`
-            : '停止当前处理';
+        updateProcessingButtonState();
         renderFileList();
 
         if (await processImage(fileObj)) {
@@ -548,8 +855,11 @@ async function runProcessingQueue(requestedFiles, mode) {
     isProcessing = false;
     processingCancelled = false;
     currentProcessingId = null;
+    currentProcessingMode = null;
+    currentProcessingPosition = 0;
+    currentProcessingTotal = 0;
     startProcessingBtn.disabled = false;
-    startProcessingBtn.textContent = '全部开始处理';
+    updateProcessingButtonState();
     renderFileList();
 
     const processedCount = uploadedFiles.filter(f => f.status === 'done').length;
@@ -558,13 +868,16 @@ async function runProcessingQueue(requestedFiles, mode) {
     }
 
     if (wasCancelled) {
-        showMessage('info', '已停止处理，剩余文件仍在待处理列表');
+        showMessage('info', t('processing.stopped'));
     } else if (mode === 'single' && successCount > 0) {
-        showMessage('info', `${filesToProcess[0].file.name} 处理完成`);
+        showMessage('info', t('processing.singleDone', { file: filesToProcess[0].file.name }));
     } else if (mode === 'all' && failureCount > 0) {
-        showMessage('info', `处理结束：${successCount} 个成功，${failureCount} 个失败`);
+        showMessage('info', t('processing.finishedWithErrors', {
+            success: successCount,
+            failure: failureCount
+        }));
     } else if (mode === 'all') {
-        showMessage('info', '全部文件处理完成');
+        showMessage('info', t('processing.allDone'));
     }
 }
 
@@ -667,7 +980,7 @@ async function resizeWithPica(file, options) {
         };
         img.onerror = () => {
             URL.revokeObjectURL(img.src);
-            reject(new Error('图片加载失败'));
+            reject(createTranslatedError('errors.imageLoad'));
         };
         img.src = URL.createObjectURL(file);
     });
@@ -679,14 +992,14 @@ function renderProcessedFileList() {
     const doneFiles = uploadedFiles.filter(f => f.status === 'done' || f.status === 'error');
 
     if (doneFiles.length === 0 && uploadedFiles.filter(f => f.status !== 'pending' && f.status !== 'processing').length === 0) {
-        processedFileListUI.innerHTML = '<p class="text-gray-500 text-sm p-4 text-center">还没有处理完成的文件。</p>';
+        processedFileListUI.innerHTML = `<p class="text-gray-500 text-sm p-4 text-center">${t('results.empty')}</p>`;
         batchDownloadBtn.classList.add('hidden');
         clearResultsBtn.classList.add('hidden');
         return;
     }
 
     if (doneFiles.length === 0 && uploadedFiles.length > 0) {
-        processedFileListUI.innerHTML = '<p class="text-gray-500 text-sm p-4 text-center">所有文件正在等待处理或处理中。</p>';
+        processedFileListUI.innerHTML = `<p class="text-gray-500 text-sm p-4 text-center">${t('results.waiting')}</p>`;
         batchDownloadBtn.classList.add('hidden');
         clearResultsBtn.classList.add('hidden');
         return;
@@ -704,7 +1017,11 @@ function renderProcessedFileList() {
         let resultInfoHtml = '';
         if (f.status === 'done') {
             const savings = ((f.originalSize - f.processedSize) / f.originalSize) * 100;
-            const savingsText = savings > 0 ? `节省 ${savings.toFixed(1)}%` : (savings < 0 ? `增大 ${Math.abs(savings).toFixed(1)}%` : '大小不变');
+            const savingsText = savings > 0
+                ? t('results.savings', { value: savings.toFixed(1) })
+                : (savings < 0
+                    ? t('results.increase', { value: Math.abs(savings).toFixed(1) })
+                    : t('results.unchanged'));
             const savingsColor = savings > 0 ? 'text-green-600' : (savings < 0 ? 'text-red-600' : 'text-gray-600');
             const savingsBgColor = savings > 0 ? 'bg-green-50' : (savings < 0 ? 'bg-red-50' : 'bg-gray-100');
             resultInfoHtml = `
@@ -714,7 +1031,8 @@ function renderProcessedFileList() {
                 </div>
             `;
         } else { // Error
-            resultInfoHtml = `<p class="text-xs text-red-500 mt-1 bg-red-50 px-2 py-0.5 rounded inline-block">错误: ${escapeHtml(f.error || '未知错误')}</p>`;
+            const errorMessage = f.errorKey ? t(f.errorKey) : t('results.unknownError');
+            resultInfoHtml = `<p class="text-xs text-red-500 mt-1 bg-red-50 px-2 py-0.5 rounded inline-block">${escapeHtml(t('results.error', { message: errorMessage }))}</p>`;
         }
 
         li.innerHTML = `
@@ -731,10 +1049,10 @@ function renderProcessedFileList() {
                 </div>
             </div>
             <div class="ml-0 sm:ml-4 flex-shrink-0 mt-3 sm:mt-0 space-x-2 w-full sm:w-auto flex justify-end">
-                ${f.status === 'done' ? `<button data-id="${f.id}" class="btn-download btn btn-primary btn-sm py-1.5 px-3 text-xs rounded-full">下载</button>` : ''}
-                ${f.status === 'error' ? `<button data-id="${f.id}" class="btn-retry-processed btn btn-primary btn-sm py-1.5 px-3 text-xs rounded-full">重试</button>` : ''}
-                <button data-id="${f.id}" class="btn-preview-processed btn btn-outline btn-sm py-1.5 px-3 text-xs rounded-full">预览</button>
-                <button data-id="${f.id}" class="btn-remove-processed btn btn-danger btn-sm py-1.5 px-3 text-xs rounded-full">移除</button>
+                ${f.status === 'done' ? `<button data-id="${f.id}" class="btn-download btn btn-primary btn-sm py-1.5 px-3 text-xs rounded-full">${t('results.download')}</button>` : ''}
+                ${f.status === 'error' ? `<button data-id="${f.id}" class="btn-retry-processed btn btn-primary btn-sm py-1.5 px-3 text-xs rounded-full">${t('results.retry')}</button>` : ''}
+                <button data-id="${f.id}" class="btn-preview-processed btn btn-outline btn-sm py-1.5 px-3 text-xs rounded-full">${t('results.preview')}</button>
+                <button data-id="${f.id}" class="btn-remove-processed btn btn-danger btn-sm py-1.5 px-3 text-xs rounded-full">${t('results.remove')}</button>
             </div>
         `;
         processedFileListUI.appendChild(li);
@@ -764,6 +1082,7 @@ function renderProcessedFileList() {
                 animatedResultFileIds.delete(id);
                 fileData.status = 'pending';
                 fileData.error = '';
+                fileData.errorKey = '';
                 fileData.progress = 0;
                 renderFileList();
                 renderProcessedFileList();
@@ -882,12 +1201,12 @@ function getBaseFileName(filename) {
 // --- Batch Download ---
 batchDownloadBtn.addEventListener('click', async () => {
     if (uploadedFiles.filter(f => f.status === 'done').length === 0) {
-        showMessage('error', '没有可下载的已处理文件');
+        showMessage('error', t('zip.none'));
         return;
     }
 
     try {
-        showMessage('info', '正在准备ZIP文件...');
+        showMessage('info', t('zip.preparing'));
         const zip = new JSZip();
 
         // 添加所有已处理的文件到zip
@@ -923,10 +1242,10 @@ batchDownloadBtn.addEventListener('click', async () => {
         document.body.removeChild(downloadLink);
         URL.revokeObjectURL(downloadLink.href);
 
-        showMessage('info', 'ZIP文件已准备好，开始下载');
+        showMessage('info', t('zip.ready'));
     } catch (error) {
-        console.error('批量下载出错:', error);
-        showMessage('error', '创建ZIP文件时出错: ' + error.message);
+        console.error('Batch download failed:', error);
+        showMessage('error', t('zip.error'));
     }
 });
 
@@ -954,7 +1273,7 @@ async function processImage(fileObj) {
                         if (blob) {
                             resolve(blob);
                         } else {
-                            reject(new Error('图片缩放失败'));
+                            reject(createTranslatedError('errors.resize'));
                         }
                     }, fileObj.file.type, options.quality || 0.7);
                 });
@@ -996,9 +1315,10 @@ async function processImage(fileObj) {
         }
         return true;
     } catch (error) {
-        console.error("处理图片出错:", error);
-        fileObj.error = error.message || '处理失败';
-        showMessage('error', `${fileObj.file.name}: ${fileObj.error}`);
+        console.error('Image processing failed:', error);
+        fileObj.errorKey = error.translationKey || 'errors.processing';
+        fileObj.error = error.message || fileObj.errorKey;
+        showMessage('error', `${fileObj.file.name}: ${t(fileObj.errorKey)}`);
         await animatePendingFileExit(fileObj.id);
         fileObj.status = 'error';
         renderFileList();
@@ -1063,13 +1383,14 @@ function handleFileInputChange() {
 // --- File Upload ---
 // 替换原有的事件绑定代码
 initializeUploadArea();
+languageToggleBtn.addEventListener('click', toggleLanguage);
 themeToggleBtn.addEventListener('click', toggleTheme);
 
 // --- Initialize ---
 document.addEventListener('DOMContentLoaded', function () {
     // 初始化上传区域
     initializeUploadArea();
-    updateThemeToggleState();
+    setLanguage(currentLanguage);
 
     // 默认选中自定义压缩并显示对应面板
     document.getElementById('modeCustom').checked = true;
