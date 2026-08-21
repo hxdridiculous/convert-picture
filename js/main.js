@@ -29,7 +29,19 @@ const compressionModeRadios = document.querySelectorAll('input[name="compression
 // --- Global State ---
 let uploadedFiles = []; // Array of {id: string, file: File, originalURL: string, processedBlob?: Blob, processedURL?: string, originalSize: number, processedSize?: number, status: string, error?: string, progress: number }
 let selectedPreviewId = null;
+let isProcessing = false;
+let processingCancelled = false;
+const animatedPendingFileIds = new Set();
+const animatedResultFileIds = new Set();
 const picaInstance = pica();
+const MAX_DIMENSION = 20000;
+const ACCEPTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/webp']);
+const ORIGINAL_OUTPUT_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const COMPRESSION_PRESETS = {
+    shrink: { quality: 0.6, maxWidth: 1280, maxHeight: 720, mimeType: 'image/jpeg' },
+    normal: { quality: 0.75, maxWidth: 1920, maxHeight: 1080, mimeType: 'image/jpeg' },
+    clear: { quality: 0.9, mimeType: 'image/webp' }
+};
 
 // --- Utility Functions ---
 function generateId() {
@@ -45,12 +57,48 @@ function formatBytes(bytes, decimals = 2) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
+function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[char]));
+}
+
+function getSafeDimension(value) {
+    const dimension = parseInt(value, 10);
+    if (!Number.isFinite(dimension) || dimension <= 0) return undefined;
+    return Math.min(dimension, MAX_DIMENSION);
+}
+
+function isSupportedImage(file) {
+    return ACCEPTED_IMAGE_TYPES.has(file.type);
+}
+
+function revokeFileUrls(fileObj) {
+    if (fileObj.originalURL) {
+        URL.revokeObjectURL(fileObj.originalURL);
+        fileObj.originalURL = '';
+    }
+    if (fileObj.processedURL) {
+        URL.revokeObjectURL(fileObj.processedURL);
+        fileObj.processedURL = '';
+    }
+}
+
 function showMessage(type, text) {
     const messageDiv = document.createElement('div');
-    messageDiv.className = `p-3 rounded-md text-sm mb-2 ${type === 'error' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`;
+    messageDiv.className = `message-toast p-3 rounded-md text-sm mb-2 ${type === 'error' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`;
     messageDiv.textContent = text;
     messageArea.appendChild(messageDiv);
-    setTimeout(() => messageDiv.remove(), 5000);
+    setTimeout(() => {
+        if (!messageDiv.isConnected) return;
+        messageDiv.classList.add('is-leaving');
+        messageDiv.addEventListener('animationend', () => messageDiv.remove(), { once: true });
+        setTimeout(() => messageDiv.remove(), 300);
+    }, 4700);
 }
 
 // --- File Handling ---
@@ -58,11 +106,22 @@ function showMessage(type, text) {
 
 function handleFiles(files) {
     if (files.length === 0) return;
+    const validFiles = Array.from(files).filter(isSupportedImage);
+    const skippedCount = files.length - validFiles.length;
+
+    if (skippedCount > 0) {
+        showMessage('error', `已跳过 ${skippedCount} 个不支持的文件`);
+    }
+
+    if (validFiles.length === 0) {
+        return;
+    }
+
     settingsSection.classList.remove('hidden');
     processingSection.classList.remove('hidden');
     resultsSection.classList.remove('hidden'); // Show results section container
 
-    const newFiles = Array.from(files).map(file => ({
+    const newFiles = validFiles.map(file => ({
         id: generateId(),
         file: file,
         originalURL: URL.createObjectURL(file),
@@ -72,6 +131,7 @@ function handleFiles(files) {
     }));
     uploadedFiles = uploadedFiles.concat(newFiles);
     renderFileList();
+    renderProcessedFileList();
     if (uploadedFiles.length > 0 && !selectedPreviewId) {
         // Auto-select first file for preview if nothing is selected
         // selectForPreview(uploadedFiles[0].id);
@@ -84,14 +144,20 @@ function renderFileList() {
         if (f.status === 'done' || f.status === 'error') return; // Don't show processed files here
 
         const li = document.createElement('li');
-        li.className = 'file-list-item flex flex-col sm:flex-row items-start sm:items-center justify-between animate-slide-up';
+        li.className = 'file-list-item flex flex-col sm:flex-row items-start sm:items-center justify-between';
         li.dataset.id = f.id;
+        if (!animatedPendingFileIds.has(f.id)) {
+            li.classList.add('list-item-enter');
+            animatedPendingFileIds.add(f.id);
+        }
+        const safeFileName = escapeHtml(f.file.name);
+        const progress = Math.max(0, Math.min(100, Number(f.progress) || 0));
 
         let progressHtml = '';
         if (f.status === 'processing') {
             progressHtml = `
                         <div class="w-full sm:w-1/3 mt-2 sm:mt-0 sm:ml-4 progress-bar-container">
-                            <div class="progress-bar" style="width: ${f.progress}%"></div>
+                            <div class="progress-bar" style="width: ${progress}%"></div>
                         </div>
                     `;
         } else {
@@ -105,7 +171,7 @@ function renderFileList() {
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                         </div>
                         <div class="min-w-0">
-                            <p class="text-sm font-semibold text-gray-800 truncate" title="${f.file.name}">${f.file.name}</p>
+                            <p class="text-sm font-semibold text-gray-800 truncate" title="${safeFileName}">${safeFileName}</p>
                             <p class="text-xs text-gray-500 mt-0.5">${formatBytes(f.originalSize)}</p>
                         </div>
                     </div>
@@ -145,7 +211,13 @@ function renderFileList() {
 }
 
 function removeFile(id) {
+    const fileToRemove = uploadedFiles.find(f => f.id === id);
+    if (fileToRemove) {
+        revokeFileUrls(fileToRemove);
+    }
     uploadedFiles = uploadedFiles.filter(f => f.id !== id);
+    animatedPendingFileIds.delete(id);
+    animatedResultFileIds.delete(id);
     if (selectedPreviewId === id) {
         clearPreview();
         selectedPreviewId = null;
@@ -188,6 +260,12 @@ function selectForPreview(id) {
 
 // 清除结果按钮事件
 clearResultsBtn.addEventListener('click', () => {
+    uploadedFiles.filter(file => file.status === 'done').forEach(file => {
+        revokeFileUrls(file);
+        animatedPendingFileIds.delete(file.id);
+        animatedResultFileIds.delete(file.id);
+    });
+
     // 清空处理结果列表
     uploadedFiles = uploadedFiles.filter(file => file.status !== 'done');
     processedFileListUI.innerHTML = '';
@@ -199,7 +277,7 @@ clearResultsBtn.addEventListener('click', () => {
 
     // 如果预览区域显示的是已处理文件，也隐藏预览
     if (document.getElementById('previewArea')) {
-        document.getElementById('previewArea').classList.add('hidden');
+        clearPreview();
     }
 
     showMessage('info', '已清除所有处理结果');
@@ -211,7 +289,7 @@ clearResultsBtn.addEventListener('click', () => {
     } else {
         // 如果没有任何文件，显示上传区域并确保其可用
         uploadArea.classList.remove('hidden');
-        settingsSection.classList.remove('hidden');
+        settingsSection.classList.add('hidden');
         processingSection.classList.add('hidden');
 
         // 重新初始化上传区域的事件监听器
@@ -236,13 +314,15 @@ qualitySlider.addEventListener('input', (e) => {
     qualityValue.textContent = e.target.value;
 });
 
-compressionModeRadios.forEach(radio => {
-    radio.addEventListener('change', (e) => {
-        customSettingsPanel.style.display = e.target.value === 'custom' ? 'block' : 'none';
-    });
-});
-
 startProcessingBtn.addEventListener('click', async () => {
+    if (isProcessing) {
+        processingCancelled = true;
+        startProcessingBtn.disabled = true;
+        startProcessingBtn.textContent = '正在取消...';
+        showMessage('info', '将在当前图片处理完成后停止');
+        return;
+    }
+
     const filesToProcess = uploadedFiles.filter(f => f.status === 'pending');
     if (filesToProcess.length === 0) {
         showMessage('error', '没有待处理的文件');
@@ -250,16 +330,22 @@ startProcessingBtn.addEventListener('click', async () => {
     }
 
     // 禁用开始处理按钮
-    startProcessingBtn.disabled = true;
-    startProcessingBtn.textContent = '处理中...';
-    startProcessingBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    isProcessing = true;
+    processingCancelled = false;
+    startProcessingBtn.disabled = false;
+    startProcessingBtn.textContent = '取消处理';
+    startProcessingBtn.classList.remove('opacity-50', 'cursor-not-allowed');
 
     // 处理所有文件
-    for (const fileObj of filesToProcess) {
+    for (let index = 0; index < filesToProcess.length; index++) {
+        if (processingCancelled) break;
+        const fileObj = filesToProcess[index];
+        startProcessingBtn.textContent = `取消处理 (${index + 1}/${filesToProcess.length})`;
         await processImage(fileObj);
     }
 
     // 恢复按钮状态
+    isProcessing = false;
     startProcessingBtn.disabled = false;
     startProcessingBtn.textContent = '开始处理';
     startProcessingBtn.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -269,24 +355,21 @@ startProcessingBtn.addEventListener('click', async () => {
         batchDownloadBtn.classList.remove('hidden');
     }
 
-    showMessage('info', '所有文件处理完成');
+    showMessage('info', processingCancelled ? '已停止处理，剩余文件仍在待处理列表' : '所有文件处理完成');
+    processingCancelled = false;
 });
 
 function getCompressorOptions(mode, originalMimeType) {
     let quality = parseFloat(qualitySlider.value);
-    let maxWidth = parseInt(maxWidthInput.value) || undefined;
-    let maxHeight = parseInt(maxHeightInput.value) || undefined;
+    let maxWidth = getSafeDimension(maxWidthInput.value);
+    let maxHeight = getSafeDimension(maxHeightInput.value);
     let mimeType = outputFormatSelect.value;
 
     if (mimeType === 'original') {
-        // Allow common types, default to jpeg if unknown or problematic (like BMP)
-        const allowedOriginals = ['image/jpeg', 'image/png', 'image/webp'];
-        if (allowedOriginals.includes(originalMimeType)) {
+        // Canvas output cannot reliably encode BMP/GIF, so fall back to JPEG for those inputs.
+        if (ORIGINAL_OUTPUT_TYPES.has(originalMimeType)) {
             mimeType = originalMimeType;
-        } else if (originalMimeType === 'image/gif') {
-            mimeType = 'image/gif'; // Compressor.js handles GIF first frame
-        }
-        else {
+        } else {
             mimeType = 'image/jpeg'; // Fallback for BMP or other types
         }
     }
@@ -305,12 +388,11 @@ function getCompressorOptions(mode, originalMimeType) {
         case 'custom':
             return { ...baseOptions, quality, maxWidth, maxHeight, mimeType };
         case 'shrink':
-            // Pica handles initial resize. Compressor.js does further compression.
-            return { ...baseOptions, quality: 0.7, maxWidth: maxWidth || 800, maxHeight: maxHeight || 800, mimeType: mimeType === 'original' ? 'image/jpeg' : mimeType };
+            return { ...baseOptions, ...COMPRESSION_PRESETS.shrink };
         case 'normal':
-            return { ...baseOptions, quality: 0.8, maxWidth: maxWidth || 1920, maxHeight: maxHeight || 1920, mimeType: mimeType === 'original' ? 'image/jpeg' : mimeType };
+            return { ...baseOptions, ...COMPRESSION_PRESETS.normal };
         case 'clear':
-            return { ...baseOptions, quality: 0.95, maxWidth, maxHeight, mimeType: mimeType === 'original' ? (originalMimeType === 'image/png' ? 'image/png' : 'image/jpeg') : mimeType };
+            return { ...baseOptions, ...COMPRESSION_PRESETS.clear };
         default:
             return { ...baseOptions, quality: 0.8, mimeType: 'image/jpeg' };
     }
@@ -323,22 +405,13 @@ async function resizeWithPica(file, options) {
         img.onload = () => {
             let targetWidth = img.width;
             let targetHeight = img.height;
-            const aspectRatio = img.width / img.height;
 
-            if (options.maxWidth && options.maxHeight) {
-                if (img.width / options.maxWidth > img.height / options.maxHeight) {
-                    targetWidth = options.maxWidth;
-                    targetHeight = targetWidth / aspectRatio;
-                } else {
-                    targetHeight = options.maxHeight;
-                    targetWidth = targetHeight * aspectRatio;
-                }
-            } else if (options.maxWidth) {
-                targetWidth = options.maxWidth;
-                targetHeight = targetWidth / aspectRatio;
-            } else if (options.maxHeight) {
-                targetHeight = options.maxHeight;
-                targetWidth = targetHeight * aspectRatio;
+            if (options.maxWidth || options.maxHeight) {
+                const widthScale = options.maxWidth ? options.maxWidth / img.width : 1;
+                const heightScale = options.maxHeight ? options.maxHeight / img.height : 1;
+                const scale = Math.min(widthScale, heightScale, 1);
+                targetWidth = img.width * scale;
+                targetHeight = img.height * scale;
             }
 
             // Ensure dimensions are integers
@@ -352,6 +425,7 @@ async function resizeWithPica(file, options) {
                 canvas.height = img.height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0);
+                URL.revokeObjectURL(img.src);
                 resolve(canvas);
                 return;
             }
@@ -364,10 +438,19 @@ async function resizeWithPica(file, options) {
                 // Pica options: alpha (for transparency), unsharpAmount, unsharpRadius, unsharpThreshold
                 alpha: true
             })
-                .then(result => resolve(result))
-                .catch(err => reject(err));
+                .then(result => {
+                    URL.revokeObjectURL(img.src);
+                    resolve(result);
+                })
+                .catch(err => {
+                    URL.revokeObjectURL(img.src);
+                    reject(err);
+                });
         };
-        img.onerror = reject;
+        img.onerror = () => {
+            URL.revokeObjectURL(img.src);
+            reject(new Error('图片加载失败'));
+        };
         img.src = URL.createObjectURL(file);
     });
 }
@@ -393,21 +476,27 @@ function renderProcessedFileList() {
 
     doneFiles.forEach(f => {
         const li = document.createElement('li');
-        li.className = 'file-list-item flex flex-col sm:flex-row items-start sm:items-center justify-between animate-slide-up';
+        li.className = 'file-list-item flex flex-col sm:flex-row items-start sm:items-center justify-between';
+        if (!animatedResultFileIds.has(f.id)) {
+            li.classList.add('list-item-enter');
+            animatedResultFileIds.add(f.id);
+        }
+        const safeFileName = escapeHtml(f.file.name);
 
         let resultInfoHtml = '';
         if (f.status === 'done') {
             const savings = ((f.originalSize - f.processedSize) / f.originalSize) * 100;
             const savingsText = savings > 0 ? `节省 ${savings.toFixed(1)}%` : (savings < 0 ? `增大 ${Math.abs(savings).toFixed(1)}%` : '大小不变');
             const savingsColor = savings > 0 ? 'text-green-600' : (savings < 0 ? 'text-red-600' : 'text-gray-600');
+            const savingsBgColor = savings > 0 ? 'bg-green-50' : (savings < 0 ? 'bg-red-50' : 'bg-gray-100');
             resultInfoHtml = `
                 <div class="flex items-center space-x-2 text-xs mt-1">
                     <span class="text-gray-500 bg-gray-100 px-2 py-0.5 rounded">${formatBytes(f.originalSize)} → ${formatBytes(f.processedSize)}</span>
-                    <span class="font-bold ${savingsColor} bg-green-50 px-2 py-0.5 rounded">${savingsText}</span>
+                    <span class="font-bold ${savingsColor} ${savingsBgColor} px-2 py-0.5 rounded">${savingsText}</span>
                 </div>
             `;
         } else { // Error
-            resultInfoHtml = `<p class="text-xs text-red-500 mt-1 bg-red-50 px-2 py-0.5 rounded inline-block">错误: ${f.error || '未知错误'}</p>`;
+            resultInfoHtml = `<p class="text-xs text-red-500 mt-1 bg-red-50 px-2 py-0.5 rounded inline-block">错误: ${escapeHtml(f.error || '未知错误')}</p>`;
         }
 
         li.innerHTML = `
@@ -419,12 +508,13 @@ function renderProcessedFileList() {
             }
                 </div>
                 <div class="min-w-0">
-                    <p class="text-sm font-semibold text-gray-800 truncate" title="${f.file.name}">${f.file.name}</p>
+                    <p class="text-sm font-semibold text-gray-800 truncate" title="${safeFileName}">${safeFileName}</p>
                     ${resultInfoHtml}
                 </div>
             </div>
             <div class="ml-0 sm:ml-4 flex-shrink-0 mt-3 sm:mt-0 space-x-2 w-full sm:w-auto flex justify-end">
                 ${f.status === 'done' ? `<button data-id="${f.id}" class="btn-download btn btn-primary btn-sm py-1.5 px-3 text-xs rounded-full">下载</button>` : ''}
+                ${f.status === 'error' ? `<button data-id="${f.id}" class="btn-retry-processed btn btn-primary btn-sm py-1.5 px-3 text-xs rounded-full">重试</button>` : ''}
                 <button data-id="${f.id}" class="btn-preview-processed btn btn-outline btn-sm py-1.5 px-3 text-xs rounded-full">预览</button>
                 <button data-id="${f.id}" class="btn-remove-processed btn btn-danger btn-sm py-1.5 px-3 text-xs rounded-full">移除</button>
             </div>
@@ -445,6 +535,21 @@ function renderProcessedFileList() {
         btn.addEventListener('click', (e) => {
             const id = e.target.dataset.id;
             selectForPreview(id);
+        });
+    });
+    document.querySelectorAll('.btn-retry-processed').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const id = e.target.dataset.id;
+            const fileData = uploadedFiles.find(f => f.id === id);
+            if (fileData) {
+                animatedPendingFileIds.delete(id);
+                animatedResultFileIds.delete(id);
+                fileData.status = 'pending';
+                fileData.error = '';
+                fileData.progress = 0;
+                renderFileList();
+                renderProcessedFileList();
+            }
         });
     });
     document.querySelectorAll('.btn-remove-processed').forEach(btn => {
@@ -470,28 +575,26 @@ function renderProcessedFileList() {
 
 // --- Compression Mode Handling ---
 compressionModeRadios.forEach(radio => {
-    radio.addEventListener('change', function () {
-        // 隐藏所有设置面板
-        document.querySelectorAll('.settings-panel').forEach(panel => {
-            panel.classList.add('hidden');
-            panel.classList.remove('panel-active');
-        });
-
-        // 显示对应的设置面板
-        const selectedMode = this.value;
-        const targetPanel = document.getElementById(`${selectedMode}SettingsPanel`);
-        if (targetPanel) {
-            targetPanel.classList.remove('hidden');
-            // 添加动画效果
-            setTimeout(() => {
-                targetPanel.classList.add('panel-active');
-            }, 10);
-        }
-
-        // 更新压缩设置
-        updateCompressionSettings();
-    });
+    radio.addEventListener('change', handleCompressionModeChange);
 });
+
+function handleCompressionModeChange() {
+    document.querySelectorAll('.settings-panel').forEach(panel => {
+        panel.classList.add('hidden');
+        panel.classList.remove('panel-active');
+    });
+
+    const selectedMode = document.querySelector('input[name="compressionMode"]:checked').value;
+    const targetPanel = document.getElementById(`${selectedMode}SettingsPanel`);
+    if (targetPanel) {
+        targetPanel.classList.remove('hidden');
+        setTimeout(() => {
+            targetPanel.classList.add('panel-active');
+        }, 10);
+    }
+
+    updateCompressionSettings();
+}
 
 function updateCompressionSettings() {
     const selectedMode = document.querySelector('input[name="compressionMode"]:checked').value;
@@ -499,25 +602,25 @@ function updateCompressionSettings() {
     // 根据不同模式设置默认参数
     switch (selectedMode) {
         case 'shrink':
-            qualitySlider.value = 0.6;
-            qualityValue.textContent = '0.6';
-            maxWidthInput.value = '1280';
-            maxHeightInput.value = '720';
-            outputFormatSelect.value = 'image/jpeg';
+            qualitySlider.value = COMPRESSION_PRESETS.shrink.quality;
+            qualityValue.textContent = String(COMPRESSION_PRESETS.shrink.quality);
+            maxWidthInput.value = String(COMPRESSION_PRESETS.shrink.maxWidth);
+            maxHeightInput.value = String(COMPRESSION_PRESETS.shrink.maxHeight);
+            outputFormatSelect.value = COMPRESSION_PRESETS.shrink.mimeType;
             break;
         case 'normal':
-            qualitySlider.value = 0.75;
-            qualityValue.textContent = '0.75';
-            maxWidthInput.value = '1920';
-            maxHeightInput.value = '1080';
-            outputFormatSelect.value = 'image/jpeg';
+            qualitySlider.value = COMPRESSION_PRESETS.normal.quality;
+            qualityValue.textContent = String(COMPRESSION_PRESETS.normal.quality);
+            maxWidthInput.value = String(COMPRESSION_PRESETS.normal.maxWidth);
+            maxHeightInput.value = String(COMPRESSION_PRESETS.normal.maxHeight);
+            outputFormatSelect.value = COMPRESSION_PRESETS.normal.mimeType;
             break;
         case 'clear':
-            qualitySlider.value = 0.9;
-            qualityValue.textContent = '0.9';
+            qualitySlider.value = COMPRESSION_PRESETS.clear.quality;
+            qualityValue.textContent = String(COMPRESSION_PRESETS.clear.quality);
             maxWidthInput.value = '';
             maxHeightInput.value = '';
-            outputFormatSelect.value = 'image/webp';
+            outputFormatSelect.value = COMPRESSION_PRESETS.clear.mimeType;
             break;
         case 'custom':
             // 保持用户自定义设置
@@ -549,7 +652,13 @@ function downloadBlob(blob, filename) {
 
 // 获取文件扩展名的辅助函数
 function getFileExtension(filename) {
-    return filename.slice((filename.lastIndexOf('.') - 1 >>> 0) + 2).toLowerCase();
+    const dotIndex = filename.lastIndexOf('.');
+    return dotIndex > 0 ? filename.slice(dotIndex + 1).toLowerCase() : '';
+}
+
+function getBaseFileName(filename) {
+    const dotIndex = filename.lastIndexOf('.');
+    return dotIndex > 0 ? filename.slice(0, dotIndex) : filename;
 }
 
 // --- Batch Download ---
@@ -569,14 +678,14 @@ batchDownloadBtn.addEventListener('click', async () => {
             let extension = getFileExtension(file.file.name);
 
             // 如果输出格式不是"original"，则根据输出格式更新扩展名
-            if (file.outputFormat && file.outputFormat !== 'original') {
-                extension = file.outputFormat.split('/')[1];
+            if (file.processedBlob && file.processedBlob.type) {
+                extension = file.processedBlob.type.split('/')[1];
                 // 特殊处理jpeg格式
                 if (extension === 'jpeg') extension = 'jpg';
             }
 
             // 创建不带扩展名的文件名基础部分
-            const baseFileName = file.file.name.substring(0, file.file.name.lastIndexOf('.'));
+            const baseFileName = getBaseFileName(file.file.name);
             // 创建新的文件名，添加"_compressed"后缀和正确的扩展名
             const newFileName = `${baseFileName}_compressed.${extension}`;
 
@@ -603,17 +712,6 @@ batchDownloadBtn.addEventListener('click', async () => {
     }
 });
 
-// 获取当前压缩设置
-function getCurrentSettings() {
-    const mode = document.querySelector('input[name="compressionMode"]:checked').value;
-    const quality = parseFloat(qualitySlider.value);
-    const maxWidth = parseInt(maxWidthInput.value) || undefined;
-    const maxHeight = parseInt(maxHeightInput.value) || undefined;
-    const outputFormat = outputFormatSelect.value;
-
-    return { mode, quality, maxWidth, maxHeight, outputFormat };
-}
-
 // 在处理图片时保存输出格式信息
 async function processImage(fileObj) {
     try {
@@ -630,10 +728,18 @@ async function processImage(fileObj) {
             if (options.maxWidth || options.maxHeight) {
                 fileObj.progress = 10; renderFileList();
                 const resizedCanvas = await resizeWithPica(fileObj.file, {
-                    maxWidth: options.maxWidth || 800, // Default shrink size
-                    maxHeight: options.maxHeight || 800
+                    maxWidth: options.maxWidth,
+                    maxHeight: options.maxHeight
                 });
-                fileToCompress = await new Promise(resolve => resizedCanvas.toBlob(resolve, fileObj.file.type, options.quality || 0.7));
+                fileToCompress = await new Promise((resolve, reject) => {
+                    resizedCanvas.toBlob(blob => {
+                        if (blob) {
+                            resolve(blob);
+                        } else {
+                            reject(new Error('图片缩放失败'));
+                        }
+                    }, fileObj.file.type, options.quality || 0.7);
+                });
                 fileObj.progress = 40; renderFileList();
             }
         }
@@ -676,21 +782,6 @@ async function processImage(fileObj) {
         renderFileList();
         renderProcessedFileList();
     }
-}
-
-// 获取文件扩展名的辅助函数
-function getFileExtension(filename) {
-    return filename.slice((filename.lastIndexOf('.') - 1 >>> 0) + 2).toLowerCase();
-}
-
-// 获取输出格式的辅助函数
-function getOutputFormat(file, settings) {
-    if (settings.outputFormat === 'original') {
-        // 检查原始格式是否受支持
-        const supportedFormats = ['image/jpeg', 'image/png', 'image/webp'];
-        return supportedFormats.includes(file.type) ? file.type : 'image/jpeg';
-    }
-    return settings.outputFormat;
 }
 
 // 将上传区域的初始化逻辑封装为函数，以便可以重复调用
@@ -742,6 +833,7 @@ function handleDrop(e) {
 function handleFileInputChange() {
     if (fileInput.files.length > 0) {
         handleFiles(fileInput.files);
+        fileInput.value = '';
     }
 }
 

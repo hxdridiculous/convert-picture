@@ -25,7 +25,7 @@
             <input type="file" id="fileInput" multiple accept="image/jpeg, image/png, image/gif, image/bmp, image/webp"
                 class="hidden">
             <div id="uploadArea" class="upload-area p-8 md:p-12 text-center rounded-lg cursor-pointer hover:bg-gray-50">
-                <div class="mb-4 transform transition-transform duration-300 group-hover:scale-110">
+                <div class="upload-icon mb-4">
                     <svg class="mx-auto h-20 w-20 text-blue-500" stroke="currentColor" fill="none" viewBox="0 0 24 24"
                         aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -52,19 +52,19 @@
                     压缩模式
                 </h3>
                 <div class="space-y-2">
-                    <div>
+                    <div class="mode-option">
                         <input type="radio" id="modeCustom" name="compressionMode" value="custom" class="mr-2" checked>
                         <label for="modeCustom" class="text-gray-700">自定义压缩</label>
                     </div>
-                    <div>
+                    <div class="mode-option">
                         <input type="radio" id="modeShrink" name="compressionMode" value="shrink" class="mr-2">
                         <label for="modeShrink" class="text-gray-700">缩小优先</label>
                     </div>
-                    <div>
+                    <div class="mode-option">
                         <input type="radio" id="modeNormal" name="compressionMode" value="normal" class="mr-2">
                         <label for="modeNormal" class="text-gray-700">普通压缩</label>
                     </div>
-                    <div>
+                    <div class="mode-option">
                         <input type="radio" id="modeClear" name="compressionMode" value="clear" class="mr-2">
                         <label for="modeClear" class="text-gray-700">清晰优先</label>
                     </div>
@@ -94,13 +94,13 @@
                         <div>
                             <label for="maxWidthInput" class="block text-sm font-medium text-gray-700">最大宽度
                                 (px)</label>
-                            <input type="number" id="maxWidthInput" placeholder="例如: 1920"
+                            <input type="number" id="maxWidthInput" min="1" max="20000" step="1" placeholder="例如: 1920"
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
                         </div>
                         <div>
                             <label for="maxHeightInput" class="block text-sm font-medium text-gray-700">最大高度
                                 (px)</label>
-                            <input type="number" id="maxHeightInput" placeholder="例如: 1080"
+                            <input type="number" id="maxHeightInput" min="1" max="20000" step="1" placeholder="例如: 1080"
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
                         </div>
                     </div>
@@ -238,7 +238,7 @@
         </div>
     </section>
 
-    <div id="messageArea" class="mt-6 w-full max-w-4xl">
+    <div id="messageArea" class="mt-6 w-full max-w-4xl" aria-live="polite">
     </div>
 
     <footer class="mt-12 text-center">
