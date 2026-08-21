@@ -1,33 +1,97 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light" data-language="en">
+<html lang="en" data-theme="light" data-language="en" data-default-language="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title data-i18n="app.title">High-Performance Online Image Tool</title>
+    <title data-i18n="app.title">Free Online Image Compressor &amp; Converter | JPG, PNG, WebP</title>
+    <meta name="description"
+        content="Compress and convert JPG, PNG, GIF, BMP and WebP images with a simple, fast, free and efficient browser tool. Resize, preview and batch download privately."
+        data-i18n-content="seo.description">
+    <meta name="keywords"
+        content="image compressor, image converter, compress images, convert images, simple image tool, fast image compression, free image converter, efficient image compression"
+        data-i18n-content="seo.keywords">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <meta name="theme-color" content="#edf8ff">
+    <link id="canonicalLink" rel="canonical" href="https://convert-picture.hxdridiculous.workers.dev/">
+    <link rel="alternate" hreflang="en" href="https://convert-picture.hxdridiculous.workers.dev/">
+    <link rel="alternate" hreflang="zh-CN" href="https://convert-picture.hxdridiculous.workers.dev/zh-CN/">
+    <link rel="alternate" hreflang="x-default" href="https://convert-picture.hxdridiculous.workers.dev/">
+
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Image Compressor &amp; Converter" data-i18n-content="seo.siteName">
+    <meta property="og:title" content="Free Online Image Compressor &amp; Converter" data-i18n-content="seo.socialTitle">
+    <meta property="og:description"
+        content="Compress and convert images simply, quickly and privately. Free JPG, PNG and WebP processing in your browser."
+        data-i18n-content="seo.socialDescription">
+    <meta id="ogUrl" property="og:url" content="https://convert-picture.hxdridiculous.workers.dev/">
+    <meta id="ogImage" property="og:image" content="https://convert-picture.hxdridiculous.workers.dev/assets/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Free online image compressor and converter" data-i18n-content="seo.socialImageAlt">
+    <meta id="ogLocale" property="og:locale" content="en_US">
+    <meta id="ogLocaleAlternate" property="og:locale:alternate" content="zh_CN">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Free Online Image Compressor &amp; Converter" data-i18n-content="seo.socialTitle">
+    <meta name="twitter:description"
+        content="Compress and convert images simply, quickly and privately in your browser."
+        data-i18n-content="seo.socialDescription">
+    <meta id="twitterImage" name="twitter:image" content="https://convert-picture.hxdridiculous.workers.dev/assets/og-image.png">
+    <meta name="twitter:image:alt" content="Free online image compressor and converter" data-i18n-content="seo.socialImageAlt">
+
+    <script id="structuredData" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "WebApplication",
+            "name": "Free Online Image Compressor & Converter",
+            "url": "https://convert-picture.hxdridiculous.workers.dev/",
+            "applicationCategory": "MultimediaApplication",
+            "operatingSystem": "Any",
+            "browserRequirements": "Requires JavaScript and HTML5 Canvas support.",
+            "description": "A simple, fast, free and efficient browser tool for compressing and converting images.",
+            "featureList": [
+                "Compress JPG, PNG, GIF, BMP and WebP images",
+                "Convert images to JPG, PNG and WebP",
+                "Resize and preview images in the browser",
+                "Batch process and download images privately"
+            ],
+            "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "USD"
+            },
+            "inLanguage": "en"
+        }
+    </script>
     <script>
         try {
+            const defaultLanguage = document.documentElement.dataset.defaultLanguage === 'zh' ? 'zh' : 'en';
+            const savedLanguage = localStorage.getItem('convertPictureLanguage');
             document.documentElement.dataset.theme = localStorage.getItem('convertPictureTheme') === 'dark' ? 'dark' : 'light';
-            document.documentElement.dataset.language = localStorage.getItem('convertPictureLanguage') === 'zh' ? 'zh' : 'en';
+            const canUseSavedLanguage = defaultLanguage === 'en';
+            document.documentElement.dataset.language = canUseSavedLanguage && (savedLanguage === 'zh' || savedLanguage === 'en')
+                ? savedLanguage
+                : defaultLanguage;
             document.documentElement.lang = document.documentElement.dataset.language === 'zh' ? 'zh-CN' : 'en';
         } catch (error) {
+            const fallbackLanguage = document.documentElement.dataset.defaultLanguage === 'zh' ? 'zh' : 'en';
             document.documentElement.dataset.theme = 'light';
-            document.documentElement.dataset.language = 'en';
-            document.documentElement.lang = 'en';
+            document.documentElement.dataset.language = fallbackLanguage;
+            document.documentElement.lang = fallbackLanguage === 'zh' ? 'zh-CN' : 'en';
         }
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+    <link rel="preload" href="/assets/outfit-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="/css/style.css">
+    <script defer src="/js/main.js"></script>
 </head>
 
 <body class="min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
 
     <div class="top-controls">
-        <button id="languageToggleBtn" type="button" class="language-toggle" aria-label="Switch to Chinese"
+        <button id="languageToggleBtn" type="button" class="language-toggle" aria-label="EN - Switch to Chinese"
             aria-pressed="false" title="Switch to Chinese">
             <span id="languageToggleText" aria-hidden="true">EN</span>
         </button>
@@ -47,12 +111,13 @@
         </button>
     </div>
 
+    <main id="mainContent" class="w-full flex flex-col items-center">
     <div class="glass-card rounded-2xl w-full max-w-4xl p-6 md:p-10 animate-slide-up">
         <header class="mb-8 text-center">
-            <h1 class="text-3xl md:text-4xl font-bold text-gray-800" data-i18n="app.heading">High-Performance
-                Online Image Tool</h1>
-            <p class="text-gray-600 mt-2" data-i18n="app.subtitle">Compress and convert images quickly and
-                securely in your browser.</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800" data-i18n="app.heading">Free Online Image
+                Compressor &amp; Converter</h1>
+            <p class="text-gray-600 mt-2" data-i18n="app.subtitle">Compress and convert images with a simple, fast,
+                free and efficient tool that works privately in your browser.</p>
         </header>
 
         <section id="uploadSection" class="mb-8">
@@ -244,7 +309,8 @@
                         <img id="previewProcessed" alt="Processed image" class="preview-image mx-auto hidden"
                             data-i18n-alt="preview.processedAlt">
                         <div id="previewProcessedPlaceholder" class="preview-generated-placeholder" role="img"
-                            aria-label="Image waiting to be processed">
+                            aria-label="Image waiting to be processed"
+                            data-i18n-aria-label="preview.waitingAria">
                             <div id="previewPlaceholderArt" class="placeholder-art" aria-hidden="true"></div>
                             <span id="previewPlaceholderLabel" class="placeholder-label"
                                 data-i18n="preview.waiting">Waiting</span>
@@ -287,19 +353,20 @@
             class="space-y-3 max-h-96 overflow-y-auto file-list-container bg-gray-50 p-4 rounded-lg">
         </div>
     </section>
+    </main>
 
     <div id="messageArea" class="w-full max-w-4xl" aria-live="polite">
     </div>
 
     <footer class="mt-12 text-center">
         <p class="text-sm text-gray-500">&copy; <span id="currentYear"></span> <span
-                data-i18n="footer.product">High-Performance Online Image Tool</span></p>
+                data-i18n="footer.product">Free Image Compressor &amp; Converter</span></p>
+        <nav class="language-links" aria-label="Language versions" data-i18n-aria-label="footer.languages">
+            <a href="/" lang="en" hreflang="en" data-language-link="en">English</a>
+            <span aria-hidden="true">/</span>
+            <a href="/zh-CN/" lang="zh-CN" hreflang="zh-CN" data-language-link="zh">简体中文</a>
+        </nav>
     </footer>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pica/9.0.1/pica.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="js/main.js"></script>
 
 </body>
 

@@ -46,7 +46,7 @@ const animatedPendingFileIds = new Set();
 const animatedResultFileIds = new Set();
 const sectionHideTimers = new WeakMap();
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-const picaInstance = pica();
+let picaInstance = null;
 const MAX_DIMENSION = 20000;
 const ACCEPTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/webp']);
 const ORIGINAL_OUTPUT_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -57,15 +57,39 @@ const COMPRESSION_PRESETS = {
 };
 const THEME_STORAGE_KEY = 'convertPictureTheme';
 const LANGUAGE_STORAGE_KEY = 'convertPictureLanguage';
+const SITE_ORIGIN = 'https://convert-picture.hxdridiculous.workers.dev';
+const DEPENDENCIES = {
+    compressor: {
+        src: 'https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js',
+        global: 'Compressor'
+    },
+    pica: {
+        src: 'https://cdnjs.cloudflare.com/ajax/libs/pica/9.0.1/pica.min.js',
+        global: 'pica'
+    },
+    jszip: {
+        src: 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
+        global: 'JSZip'
+    }
+};
+const dependencyLoadPromises = new Map();
 const TRANSLATIONS = {
     en: {
-        'app.title': 'High-Performance Online Image Tool',
-        'app.heading': 'High-Performance Online Image Tool',
-        'app.subtitle': 'Compress and convert images quickly and securely in your browser.',
+        'app.title': 'Free Online Image Compressor & Converter | JPG, PNG, WebP',
+        'app.heading': 'Free Online Image Compressor & Converter',
+        'app.subtitle': 'Compress and convert images with a simple, fast, free and efficient tool that works privately in your browser.',
+        'seo.description': 'Compress and convert JPG, PNG, GIF, BMP and WebP images with a simple, fast, free and efficient browser tool. Resize, preview and batch download privately.',
+        'seo.keywords': 'image compressor, image converter, compress images, convert images, simple image tool, fast image compression, free image converter, efficient image compression',
+        'seo.siteName': 'Image Compressor & Converter',
+        'seo.socialTitle': 'Free Online Image Compressor & Converter',
+        'seo.socialDescription': 'Compress and convert images simply, quickly and privately. Free JPG, PNG and WebP processing in your browser.',
+        'seo.socialImageAlt': 'Free online image compressor and converter',
         'theme.switchToLight': 'Switch to light theme',
         'theme.switchToDark': 'Switch to dark theme',
         'language.switchToChinese': 'Switch to Chinese',
         'language.switchToEnglish': 'Switch to English',
+        'language.currentEnglish': 'EN - Switch to Chinese',
+        'language.currentChinese': 'Chinese - Switch to English',
         'upload.drop': 'Drop images here, or',
         'upload.choose': 'choose files',
         'upload.formats': 'Supports JPG, PNG, GIF, BMP and WebP',
@@ -123,6 +147,7 @@ const TRANSLATIONS = {
         'preview.originalAlt': 'Original image',
         'preview.processedAlt': 'Processed image',
         'preview.waiting': 'Waiting',
+        'preview.waitingAria': 'Image waiting to be processed',
         'preview.unavailable': 'Preview unavailable',
         'preview.loadFailed': 'After: preview failed to load',
         'preview.originalSize': 'Original: {size}',
@@ -150,20 +175,30 @@ const TRANSLATIONS = {
         'errors.imageLoad': 'Unable to load the image.',
         'errors.resize': 'Unable to resize the image.',
         'errors.processing': 'Unable to process the image.',
+        'errors.dependency': 'A required processing library could not be loaded.',
         'zip.none': 'There are no processed files to download.',
         'zip.preparing': 'Preparing the ZIP file...',
         'zip.ready': 'The ZIP file is ready. Download started.',
         'zip.error': 'Unable to create the ZIP file.',
-        'footer.product': 'High-Performance Online Image Tool'
+        'footer.product': 'Free Image Compressor & Converter',
+        'footer.languages': 'Language versions'
     },
     zh: {
-        'app.title': '高性能在线图片工具',
-        'app.heading': '高性能在线图片工具',
-        'app.subtitle': '在浏览器中安全快速地压缩和转换您的图片。',
+        'app.title': '免费在线图片压缩与转换工具 | JPG、PNG、WebP',
+        'app.heading': '免费在线图片压缩与转换工具',
+        'app.subtitle': '简单、快速、高效地压缩和转换图片，完全免费，并在浏览器本地保护您的隐私。',
+        'seo.description': '免费压缩和转换 JPG、PNG、GIF、BMP 与 WebP 图片。简单、快速、高效地调整尺寸、实时预览和批量下载，图片仅在浏览器本地处理。',
+        'seo.keywords': '压缩图片, 转换图片, 简单图片工具, 快速图片压缩, 免费图片转换, 高效图片压缩, 在线图片压缩, 图片格式转换',
+        'seo.siteName': '图片压缩与转换工具',
+        'seo.socialTitle': '免费在线图片压缩与转换工具',
+        'seo.socialDescription': '简单、快速、高效地压缩和转换图片。免费处理 JPG、PNG 和 WebP，图片无需上传服务器。',
+        'seo.socialImageAlt': '免费在线图片压缩与转换工具',
         'theme.switchToLight': '切换到亮色主题',
         'theme.switchToDark': '切换到暗色主题',
         'language.switchToChinese': '切换为中文',
         'language.switchToEnglish': '切换为英文',
+        'language.currentEnglish': '英文 - 切换为中文',
+        'language.currentChinese': '中 - 切换为英文',
         'upload.drop': '将图片拖拽至此，或',
         'upload.choose': '点击选择文件',
         'upload.formats': '支持 JPG、PNG、GIF、BMP 和 WebP 格式',
@@ -221,6 +256,7 @@ const TRANSLATIONS = {
         'preview.originalAlt': '处理前图片',
         'preview.processedAlt': '处理后图片',
         'preview.waiting': '等待处理',
+        'preview.waitingAria': '图片等待处理',
         'preview.unavailable': '预览不可用',
         'preview.loadFailed': '处理后：预览加载失败',
         'preview.originalSize': '原始大小：{size}',
@@ -248,11 +284,47 @@ const TRANSLATIONS = {
         'errors.imageLoad': '图片加载失败。',
         'errors.resize': '图片缩放失败。',
         'errors.processing': '图片处理失败。',
+        'errors.dependency': '无法加载图片处理所需的组件。',
         'zip.none': '没有可下载的已处理文件。',
         'zip.preparing': '正在准备 ZIP 文件...',
         'zip.ready': 'ZIP 文件已准备好，开始下载。',
         'zip.error': '创建 ZIP 文件失败。',
-        'footer.product': '高性能在线图片工具'
+        'footer.product': '免费图片压缩与转换工具',
+        'footer.languages': '语言版本'
+    }
+};
+const SEO_CONFIG = {
+    en: {
+        path: '/',
+        locale: 'en_US',
+        alternateLocale: 'zh_CN',
+        language: 'en',
+        image: '/assets/og-image.png',
+        name: 'Free Online Image Compressor & Converter',
+        description: 'A simple, fast, free and efficient browser tool for compressing and converting images.',
+        currency: 'USD',
+        features: [
+            'Compress JPG, PNG, GIF, BMP and WebP images',
+            'Convert images to JPG, PNG and WebP',
+            'Resize and preview images in the browser',
+            'Batch process and download images privately'
+        ]
+    },
+    zh: {
+        path: '/zh-CN/',
+        locale: 'zh_CN',
+        alternateLocale: 'en_US',
+        language: 'zh-CN',
+        image: '/assets/og-image-zh-CN.png',
+        name: '免费在线图片压缩与转换工具',
+        description: '简单、快速、免费且高效的浏览器图片压缩与转换工具。',
+        currency: 'CNY',
+        features: [
+            '压缩 JPG、PNG、GIF、BMP 和 WebP 图片',
+            '将图片转换为 JPG、PNG 和 WebP',
+            '在浏览器中调整尺寸并实时预览',
+            '本地批量处理并下载图片'
+        ]
     }
 };
 const PLACEHOLDER_PATTERNS = [
@@ -298,6 +370,94 @@ function createTranslatedError(key) {
     return error;
 }
 
+function loadDependency(name) {
+    const dependency = DEPENDENCIES[name];
+    if (!dependency) {
+        return Promise.reject(createTranslatedError('errors.dependency'));
+    }
+
+    if (window[dependency.global]) {
+        return Promise.resolve(window[dependency.global]);
+    }
+
+    if (dependencyLoadPromises.has(name)) {
+        return dependencyLoadPromises.get(name);
+    }
+
+    const loadPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = dependency.src;
+        script.async = true;
+        script.dataset.dependency = name;
+        script.onload = () => {
+            if (window[dependency.global]) {
+                resolve(window[dependency.global]);
+            } else {
+                reject(createTranslatedError('errors.dependency'));
+            }
+        };
+        script.onerror = () => reject(createTranslatedError('errors.dependency'));
+        document.head.appendChild(script);
+    }).catch(error => {
+        dependencyLoadPromises.delete(name);
+        throw error;
+    });
+
+    dependencyLoadPromises.set(name, loadPromise);
+    return loadPromise;
+}
+
+function getLanguageFromPath() {
+    return /^\/zh-CN(?:\/|$)/i.test(window.location.pathname) ? 'zh' : 'en';
+}
+
+function syncLanguageUrl(language, historyMode = 'push') {
+    const targetPath = SEO_CONFIG[language].path;
+    if (window.location.pathname === targetPath) return;
+
+    const targetUrl = new URL(targetPath, window.location.origin);
+    targetUrl.search = window.location.search;
+    targetUrl.hash = window.location.hash;
+    window.history[`${historyMode}State`]({ language }, '', targetUrl);
+}
+
+function updateSeoMetadata() {
+    const config = SEO_CONFIG[currentLanguage];
+    const canonicalUrl = `${SITE_ORIGIN}${config.path}`;
+    const canonicalLink = document.getElementById('canonicalLink');
+    const ogUrl = document.getElementById('ogUrl');
+    const ogLocale = document.getElementById('ogLocale');
+    const ogLocaleAlternate = document.getElementById('ogLocaleAlternate');
+    const ogImage = document.getElementById('ogImage');
+    const twitterImage = document.getElementById('twitterImage');
+    const structuredData = document.getElementById('structuredData');
+    const socialImageUrl = `${SITE_ORIGIN}${config.image}`;
+
+    canonicalLink.href = canonicalUrl;
+    ogUrl.content = canonicalUrl;
+    ogLocale.content = config.locale;
+    ogLocaleAlternate.content = config.alternateLocale;
+    ogImage.content = socialImageUrl;
+    twitterImage.content = socialImageUrl;
+    structuredData.textContent = JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'WebApplication',
+        name: config.name,
+        url: canonicalUrl,
+        applicationCategory: 'MultimediaApplication',
+        operatingSystem: 'Any',
+        browserRequirements: 'Requires JavaScript and HTML5 Canvas support.',
+        description: config.description,
+        featureList: config.features,
+        offers: {
+            '@type': 'Offer',
+            price: '0',
+            priceCurrency: config.currency
+        },
+        inLanguage: config.language
+    });
+}
+
 function applyStaticTranslations() {
     document.querySelectorAll('[data-i18n]').forEach(element => {
         element.textContent = t(element.dataset.i18n);
@@ -307,7 +467,8 @@ function applyStaticTranslations() {
         'data-i18n-aria-label': 'aria-label',
         'data-i18n-title': 'title',
         'data-i18n-placeholder': 'placeholder',
-        'data-i18n-alt': 'alt'
+        'data-i18n-alt': 'alt',
+        'data-i18n-content': 'content'
     };
 
     Object.entries(translatedAttributes).forEach(([dataAttribute, targetAttribute]) => {
@@ -319,11 +480,20 @@ function applyStaticTranslations() {
 
 function updateLanguageToggleState() {
     const isChinese = currentLanguage === 'zh';
-    const label = isChinese ? t('language.switchToEnglish') : t('language.switchToChinese');
+    const actionLabel = isChinese ? t('language.switchToEnglish') : t('language.switchToChinese');
+    const accessibleLabel = isChinese ? t('language.currentChinese') : t('language.currentEnglish');
     languageToggleText.textContent = isChinese ? '中' : 'EN';
-    languageToggleBtn.setAttribute('aria-label', label);
+    languageToggleBtn.setAttribute('aria-label', accessibleLabel);
     languageToggleBtn.setAttribute('aria-pressed', String(isChinese));
-    languageToggleBtn.title = label;
+    languageToggleBtn.title = actionLabel;
+    document.querySelectorAll('[data-language-link]').forEach(link => {
+        const isCurrentLanguage = link.dataset.languageLink === currentLanguage;
+        if (isCurrentLanguage) {
+            link.setAttribute('aria-current', 'page');
+        } else {
+            link.removeAttribute('aria-current');
+        }
+    });
 }
 
 function setLanguage(language, persist = false) {
@@ -334,6 +504,7 @@ function setLanguage(language, persist = false) {
     document.documentElement.lang = nextLanguage === 'zh' ? 'zh-CN' : 'en';
 
     applyStaticTranslations();
+    updateSeoMetadata();
     updateLanguageToggleState();
     updateThemeToggleState();
     updateProcessingButtonState();
@@ -358,7 +529,9 @@ function setLanguage(language, persist = false) {
 }
 
 function toggleLanguage() {
-    setLanguage(currentLanguage === 'en' ? 'zh' : 'en', true);
+    const nextLanguage = currentLanguage === 'en' ? 'zh' : 'en';
+    syncLanguageUrl(nextLanguage);
+    setLanguage(nextLanguage, true);
 }
 
 function generateId() {
@@ -930,6 +1103,11 @@ function getCompressorOptions(mode, originalMimeType) {
 }
 
 async function resizeWithPica(file, options) {
+    if (!picaInstance) {
+        await loadDependency('pica');
+        picaInstance = window.pica();
+    }
+
     // options: { maxWidth, maxHeight }
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -1207,7 +1385,8 @@ batchDownloadBtn.addEventListener('click', async () => {
 
     try {
         showMessage('info', t('zip.preparing'));
-        const zip = new JSZip();
+        await loadDependency('jszip');
+        const zip = new window.JSZip();
 
         // 添加所有已处理的文件到zip
         uploadedFiles.filter(f => f.status === 'done').forEach(file => {
@@ -1258,6 +1437,7 @@ async function processImage(fileObj) {
 
         const mode = document.querySelector('input[name="compressionMode"]:checked').value;
         const options = getCompressorOptions(mode, fileObj.file.type);
+        await loadDependency('compressor');
 
         // If mode is 'shrink' and it's not a GIF, use Pica first for resizing
         let fileToCompress = fileObj.file;
@@ -1288,7 +1468,7 @@ async function processImage(fileObj) {
         renderFileList();
 
         const compressedBlob = await new Promise((resolve, reject) => {
-            new Compressor(fileToCompress, {
+            new window.Compressor(fileToCompress, {
                 ...options,
                 success: resolve,
                 error: reject,
@@ -1385,12 +1565,26 @@ function handleFileInputChange() {
 initializeUploadArea();
 languageToggleBtn.addEventListener('click', toggleLanguage);
 themeToggleBtn.addEventListener('click', toggleTheme);
+document.querySelectorAll('[data-language-link]').forEach(link => {
+    link.addEventListener('click', event => {
+        event.preventDefault();
+        const nextLanguage = link.dataset.languageLink === 'zh' ? 'zh' : 'en';
+        syncLanguageUrl(nextLanguage);
+        setLanguage(nextLanguage, true);
+    });
+});
+window.addEventListener('popstate', () => {
+    setLanguage(getLanguageFromPath(), true);
+});
 
 // --- Initialize ---
 document.addEventListener('DOMContentLoaded', function () {
     // 初始化上传区域
     initializeUploadArea();
-    setLanguage(currentLanguage);
+    if (getLanguageFromPath() !== currentLanguage) {
+        syncLanguageUrl(currentLanguage, 'replace');
+    }
+    setLanguage(currentLanguage, true);
 
     // 默认选中自定义压缩并显示对应面板
     document.getElementById('modeCustom').checked = true;
