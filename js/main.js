@@ -1,10 +1,11 @@
 // --- DOM Elements ---
 const uploadArea = document.getElementById('uploadArea');
 const fileInput = document.getElementById('fileInput');
+const themeToggleBtn = document.getElementById('themeToggleBtn');
 const settingsSection = document.getElementById('settingsSection');
 const processingSection = document.getElementById('processingSection');
+const previewSection = document.getElementById('previewSection');
 const resultsSection = document.getElementById('resultsSection');
-const customSettingsPanel = document.getElementById('customSettingsPanel');
 const qualitySlider = document.getElementById('qualitySlider');
 const qualityValue = document.getElementById('qualityValue');
 const maxWidthInput = document.getElementById('maxWidthInput');
@@ -15,14 +16,17 @@ const processedFileListUI = document.getElementById('processedFileList');
 const startProcessingBtn = document.getElementById('startProcessingBtn');
 const batchDownloadBtn = document.getElementById('batchDownloadBtn');
 const clearResultsBtn = document.getElementById('clearResultsBtn');
+const closePreviewBtn = document.getElementById('closePreviewBtn');
 const previewArea = document.getElementById('previewArea');
 const previewOriginalImg = document.getElementById('previewOriginal');
 const previewProcessedImg = document.getElementById('previewProcessed');
+const previewProcessedPlaceholder = document.getElementById('previewProcessedPlaceholder');
+const previewPlaceholderArt = document.getElementById('previewPlaceholderArt');
+const previewPlaceholderLabel = document.getElementById('previewPlaceholderLabel');
 const previewOriginalSize = document.getElementById('previewOriginalSize');
 const previewProcessedSize = document.getElementById('previewProcessedSize');
 const previewSavings = document.getElementById('previewSavings');
 const previewFileName = document.getElementById('previewFileName');
-const previewPlaceholder = document.getElementById('previewPlaceholder');
 const messageArea = document.getElementById('messageArea');
 const compressionModeRadios = document.querySelectorAll('input[name="compressionMode"]');
 
@@ -31,8 +35,11 @@ let uploadedFiles = []; // Array of {id: string, file: File, originalURL: string
 let selectedPreviewId = null;
 let isProcessing = false;
 let processingCancelled = false;
+let currentProcessingId = null;
 const animatedPendingFileIds = new Set();
 const animatedResultFileIds = new Set();
+const sectionHideTimers = new WeakMap();
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const picaInstance = pica();
 const MAX_DIMENSION = 20000;
 const ACCEPTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/webp']);
@@ -42,6 +49,37 @@ const COMPRESSION_PRESETS = {
     normal: { quality: 0.75, maxWidth: 1920, maxHeight: 1080, mimeType: 'image/jpeg' },
     clear: { quality: 0.9, mimeType: 'image/webp' }
 };
+const THEME_STORAGE_KEY = 'convertPictureTheme';
+const PLACEHOLDER_PATTERNS = [
+    [
+        ['frame', 8, 12, 72, 64],
+        ['frame', 18, 23, 56, 42],
+        ['block strong', 58, 45, 24, 25],
+        ['line', 10, 84, 32, 1],
+        ['line', 49, 84, 29, 1]
+    ],
+    [
+        ['block', 8, 15, 23, 31],
+        ['block strong', 36, 15, 48, 14],
+        ['frame', 36, 36, 22, 31],
+        ['block', 63, 36, 21, 31],
+        ['line', 8, 78, 76, 1]
+    ],
+    [
+        ['block strong', 10, 16, 55, 10],
+        ['block', 22, 34, 58, 10],
+        ['block strong', 34, 52, 48, 10],
+        ['frame', 46, 70, 36, 12],
+        ['line', 10, 86, 72, 1]
+    ],
+    [
+        ['frame', 9, 14, 21, 58],
+        ['block', 36, 28, 21, 44],
+        ['frame', 63, 20, 21, 52],
+        ['line', 19, 80, 55, 1],
+        ['block strong', 36, 14, 48, 7]
+    ]
+];
 
 // --- Utility Functions ---
 function generateId() {
@@ -88,6 +126,105 @@ function revokeFileUrls(fileObj) {
     }
 }
 
+function createPlaceholderPattern() {
+    return Math.floor(Math.random() * PLACEHOLDER_PATTERNS.length);
+}
+
+function renderProcessedPlaceholder(patternIndex, label = '等待处理', isError = false) {
+    const pattern = PLACEHOLDER_PATTERNS[patternIndex] || PLACEHOLDER_PATTERNS[0];
+    const fragment = document.createDocumentFragment();
+
+    pattern.forEach(([typeNames, x, y, width, height, rotation = 0]) => {
+        const shape = document.createElement('span');
+        shape.className = `placeholder-shape ${typeNames.split(' ').map(type => `is-${type}`).join(' ')}`;
+        shape.style.setProperty('--shape-x', x);
+        shape.style.setProperty('--shape-y', y);
+        shape.style.setProperty('--shape-width', width);
+        shape.style.setProperty('--shape-height', height);
+        shape.style.setProperty('--shape-rotation', rotation);
+        fragment.appendChild(shape);
+    });
+
+    previewPlaceholderArt.replaceChildren(fragment);
+    previewPlaceholderLabel.textContent = label;
+    previewProcessedPlaceholder.setAttribute('aria-label', label);
+    previewProcessedPlaceholder.classList.toggle('is-error', isError);
+    previewProcessedPlaceholder.classList.remove('hidden');
+    previewProcessedImg.classList.add('hidden');
+    previewProcessedImg.removeAttribute('src');
+}
+
+function showProcessedPreview(fileData) {
+    previewProcessedPlaceholder.classList.add('hidden');
+    previewProcessedImg.classList.remove('hidden');
+    previewProcessedImg.onerror = () => {
+        renderProcessedPlaceholder(fileData.placeholderPattern, '预览不可用', true);
+        previewProcessedSize.textContent = '处理后: 预览加载失败';
+        previewSavings.textContent = '';
+    };
+    previewProcessedImg.src = fileData.processedURL;
+}
+
+function setCollapsibleSectionVisibility(section, shouldShow) {
+    const existingTimer = sectionHideTimers.get(section);
+
+    if (shouldShow) {
+        if (existingTimer) {
+            clearTimeout(existingTimer);
+            sectionHideTimers.delete(section);
+        }
+        section.classList.remove('hidden', 'is-hiding');
+        section.removeAttribute('aria-hidden');
+        section.style.removeProperty('--collapse-height');
+        return;
+    }
+
+    if (existingTimer || section.classList.contains('hidden') || section.classList.contains('is-hiding')) {
+        return;
+    }
+
+    if (prefersReducedMotion.matches) {
+        section.classList.add('hidden');
+        section.setAttribute('aria-hidden', 'true');
+        return;
+    }
+
+    section.style.setProperty('--collapse-height', `${section.offsetHeight}px`);
+    section.classList.add('is-hiding');
+    section.setAttribute('aria-hidden', 'true');
+
+    const hideTimer = setTimeout(() => {
+        if (section.classList.contains('is-hiding')) {
+            section.classList.add('hidden');
+            section.classList.remove('is-hiding');
+            section.style.removeProperty('--collapse-height');
+        }
+        sectionHideTimers.delete(section);
+    }, 420);
+    sectionHideTimers.set(section, hideTimer);
+}
+
+function updateThemeToggleState() {
+    const isDarkTheme = document.documentElement.dataset.theme === 'dark';
+    const label = isDarkTheme ? '切换到亮色主题' : '切换到暗色主题';
+    themeToggleBtn.setAttribute('aria-label', label);
+    themeToggleBtn.setAttribute('aria-pressed', String(isDarkTheme));
+    themeToggleBtn.title = label;
+}
+
+function toggleTheme() {
+    const nextTheme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = nextTheme;
+
+    try {
+        localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+    } catch (error) {
+        console.warn('无法保存主题偏好:', error);
+    }
+
+    updateThemeToggleState();
+}
+
 function showMessage(type, text) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message-toast p-3 rounded-md text-sm mb-2 ${type === 'error' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`;
@@ -126,6 +263,7 @@ function handleFiles(files) {
         file: file,
         originalURL: URL.createObjectURL(file),
         originalSize: file.size,
+        placeholderPattern: createPlaceholderPattern(),
         status: 'pending', // pending, processing, done, error
         progress: 0
     }));
@@ -139,9 +277,9 @@ function handleFiles(files) {
 }
 
 function renderFileList() {
-    fileListUI.innerHTML = ''; // Clear existing list
+    fileListUI.innerHTML = '';
     uploadedFiles.forEach(f => {
-        if (f.status === 'done' || f.status === 'error') return; // Don't show processed files here
+        if (f.status === 'done' || f.status === 'error') return;
 
         const li = document.createElement('li');
         li.className = 'file-list-item flex flex-col sm:flex-row items-start sm:items-center justify-between';
@@ -152,66 +290,79 @@ function renderFileList() {
         }
         const safeFileName = escapeHtml(f.file.name);
         const progress = Math.max(0, Math.min(100, Number(f.progress) || 0));
+        const isCurrentFile = f.status === 'processing' && currentProcessingId === f.id;
+        const disableRowActions = isProcessing ? 'disabled' : '';
 
-        let progressHtml = '';
-        if (f.status === 'processing') {
-            progressHtml = `
-                        <div class="w-full sm:w-1/3 mt-2 sm:mt-0 sm:ml-4 progress-bar-container">
-                            <div class="progress-bar" style="width: ${progress}%"></div>
-                        </div>
-                    `;
-        } else {
-            progressHtml = `<div class="w-full sm:w-1/3 mt-2 sm:mt-0 sm:ml-4 text-xs text-gray-500 font-medium">状态: ${f.status === 'pending' ? '待处理' : f.status}</div>`;
-        }
-
+        const stateHtml = f.status === 'processing'
+            ? `<div class="file-progress" aria-label="处理进度 ${progress}%">
+                    <div class="progress-bar-container"><div class="progress-bar" style="width: ${progress}%"></div></div>
+                    <span>${progress}%</span>
+                </div>`
+            : '';
 
         li.innerHTML = `
-                    <div class="flex items-center flex-grow overflow-hidden mb-2 sm:mb-0 w-full sm:w-auto">
-                        <div class="file-icon">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                        </div>
-                        <div class="min-w-0">
-                            <p class="text-sm font-semibold text-gray-800 truncate" title="${safeFileName}">${safeFileName}</p>
-                            <p class="text-xs text-gray-500 mt-0.5">${formatBytes(f.originalSize)}</p>
-                        </div>
-                    </div>
-                    ${progressHtml}
-                    <div class="ml-0 sm:ml-4 flex-shrink-0 mt-3 sm:mt-0 space-x-2 w-full sm:w-auto flex justify-end">
-                        <button class="btn-preview btn btn-outline btn-sm py-1.5 px-3 text-xs rounded-full">预览</button>
-                        <button class="btn-remove btn btn-danger btn-sm py-1.5 px-3 text-xs rounded-full">移除</button>
-                    </div>
-                `;
+            <button type="button" class="file-preview-trigger" aria-label="预览 ${safeFileName}" title="预览 ${safeFileName}">
+                <span class="file-thumbnail-wrap"><img class="file-thumbnail" alt=""></span>
+                <span class="min-w-0">
+                    <span class="file-name block text-sm font-semibold text-gray-800 truncate">${safeFileName}</span>
+                    <span class="block text-xs text-gray-500 mt-0.5">${formatBytes(f.originalSize)}</span>
+                </span>
+            </button>
+            ${stateHtml}
+            <div class="file-row-actions">
+                <button type="button" class="btn-process btn btn-primary btn-row" ${disableRowActions}
+                    aria-label="开始处理 ${safeFileName}">${isCurrentFile ? '处理中' : '开始处理'}</button>
+                <button type="button" class="btn-remove btn btn-danger btn-row" ${disableRowActions}
+                    aria-label="移除 ${safeFileName}">移除</button>
+            </div>
+        `;
+        li.querySelector('.file-thumbnail').src = f.originalURL;
         fileListUI.appendChild(li);
     });
 
-    // Add event listeners for new buttons
-    document.querySelectorAll('.btn-preview').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const id = e.target.closest('li').dataset.id;
-            selectForPreview(id);
-        });
-    });
-    document.querySelectorAll('.btn-remove').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const id = e.target.closest('li').dataset.id;
-            removeFile(id);
+    fileListUI.querySelectorAll('.file-preview-trigger').forEach(trigger => {
+        trigger.addEventListener('click', (event) => {
+            selectForPreview(event.currentTarget.closest('li').dataset.id);
         });
     });
 
-    if (uploadedFiles.filter(f => f.status === 'pending' || f.status === 'processing').length === 0) {
-        if (uploadedFiles.length > 0) { // only hide if all files are processed or removed, but there were files
-            // processingSection.classList.add('hidden'); // Or show a message "All files processed"
-        } else { // No files at all
-            settingsSection.classList.add('hidden');
-            processingSection.classList.add('hidden');
-            resultsSection.classList.add('hidden');
-            previewArea.classList.add('hidden');
-        }
+    fileListUI.querySelectorAll('.btn-process').forEach(button => {
+        button.addEventListener('click', (event) => {
+            const fileData = uploadedFiles.find(file => file.id === event.currentTarget.closest('li').dataset.id);
+            if (fileData) {
+                void runProcessingQueue([fileData], 'single');
+            }
+        });
+    });
+
+    fileListUI.querySelectorAll('.btn-remove').forEach(button => {
+        button.addEventListener('click', (event) => {
+            removeFile(event.currentTarget.closest('li').dataset.id);
+        });
+    });
+
+    if (uploadedFiles.length === 0) {
+        settingsSection.classList.add('hidden');
+        resultsSection.classList.add('hidden');
     }
+
+    updateProcessingSectionState();
+}
+
+function updateProcessingSectionState() {
+    const hasPendingFiles = uploadedFiles.some(f => f.status === 'pending' || f.status === 'processing');
+    const hasVisiblePreview = selectedPreviewId !== null;
+
+    setCollapsibleSectionVisibility(processingSection, hasPendingFiles || isProcessing);
+    setCollapsibleSectionVisibility(previewSection, hasVisiblePreview);
 }
 
 function removeFile(id) {
     const fileToRemove = uploadedFiles.find(f => f.id === id);
+    if (isProcessing) {
+        showMessage('info', '请等待当前处理任务结束后再移除文件');
+        return;
+    }
     if (fileToRemove) {
         revokeFileUrls(fileToRemove);
     }
@@ -233,28 +384,27 @@ function removeFile(id) {
 }
 
 function selectForPreview(id) {
-    selectedPreviewId = id;
     const fileData = uploadedFiles.find(f => f.id === id);
     if (fileData) {
-        previewArea.classList.remove('hidden');
-        previewPlaceholder.classList.add('hidden');
+        selectedPreviewId = id;
         previewFileName.textContent = fileData.file.name;
         previewOriginalImg.src = fileData.originalURL;
         previewOriginalSize.textContent = `原始大小: ${formatBytes(fileData.originalSize)}`;
 
         if (fileData.processedURL && fileData.processedSize) {
-            previewProcessedImg.src = fileData.processedURL;
-            previewProcessedImg.onerror = () => { previewProcessedImg.src = "https://placehold.co/400x300/e2e8f0/94a3b8?text=预览加载失败"; };
+            showProcessedPreview(fileData);
             previewProcessedSize.textContent = `处理后: ${formatBytes(fileData.processedSize)}`;
             const savings = ((fileData.originalSize - fileData.processedSize) / fileData.originalSize) * 100;
             previewSavings.textContent = savings > 0 ? `节省: ${savings.toFixed(1)}%` : (savings < 0 ? `增大: ${Math.abs(savings).toFixed(1)}%` : '大小不变');
             previewSavings.className = `text-center text-sm font-semibold mt-1 ${savings > 0 ? 'text-green-600' : (savings < 0 ? 'text-red-600' : 'text-gray-600')}`;
 
         } else {
-            previewProcessedImg.src = "https://placehold.co/400x300/e2e8f0/94a3b8?text=待处理";
+            renderProcessedPlaceholder(fileData.placeholderPattern);
             previewProcessedSize.textContent = '处理后: -';
             previewSavings.textContent = '';
         }
+
+        updateProcessingSectionState();
     }
 }
 
@@ -297,66 +447,134 @@ clearResultsBtn.addEventListener('click', () => {
     }
 });
 
-function clearPreview() {
-    previewArea.classList.add('hidden');
-    previewPlaceholder.classList.remove('hidden');
+function clearPreview(restoreFocus = false) {
+    const previousPreviewId = selectedPreviewId;
     previewFileName.textContent = '';
-    previewOriginalImg.src = "https://placehold.co/400x300/e2e8f0/94a3b8?text=处理前";
-    previewProcessedImg.src = "https://placehold.co/400x300/e2e8f0/94a3b8?text=处理后";
+    previewOriginalImg.removeAttribute('src');
+    previewProcessedImg.removeAttribute('src');
+    previewProcessedImg.classList.add('hidden');
+    previewProcessedPlaceholder.classList.add('hidden');
     previewOriginalSize.textContent = '';
     previewProcessedSize.textContent = '';
     previewSavings.textContent = '';
     selectedPreviewId = null;
+    updateProcessingSectionState();
+
+    if (restoreFocus && previousPreviewId) {
+        requestAnimationFrame(() => {
+            fileListUI.querySelector(`li[data-id="${previousPreviewId}"] .file-preview-trigger`)?.focus();
+        });
+    }
 }
+
+closePreviewBtn.addEventListener('click', () => clearPreview(true));
 
 // --- Compression Logic ---
 qualitySlider.addEventListener('input', (e) => {
     qualityValue.textContent = e.target.value;
 });
 
-startProcessingBtn.addEventListener('click', async () => {
+function animatePendingFileExit(id) {
+    const item = fileListUI.querySelector(`li[data-id="${id}"]`);
+    if (!item || prefersReducedMotion.matches) {
+        return Promise.resolve();
+    }
+
+    const itemStyles = getComputedStyle(item);
+    item.style.setProperty('--item-height', `${item.offsetHeight}px`);
+    item.style.setProperty('--item-gap', itemStyles.marginBottom);
+    item.classList.add('list-item-exit');
+
+    return new Promise(resolve => {
+        let resolved = false;
+        const finish = () => {
+            if (resolved) return;
+            resolved = true;
+            item.removeEventListener('animationend', handleAnimationEnd);
+            resolve();
+        };
+        const handleAnimationEnd = event => {
+            if (event.animationName === 'listItemExit') finish();
+        };
+
+        item.addEventListener('animationend', handleAnimationEnd);
+        setTimeout(finish, 430);
+    });
+}
+
+function requestProcessingCancellation() {
+    processingCancelled = true;
+    startProcessingBtn.disabled = true;
+    startProcessingBtn.textContent = '正在停止...';
+    showMessage('info', '将在当前图片处理完成后停止');
+    renderFileList();
+}
+
+async function runProcessingQueue(requestedFiles, mode) {
     if (isProcessing) {
-        processingCancelled = true;
-        startProcessingBtn.disabled = true;
-        startProcessingBtn.textContent = '正在取消...';
-        showMessage('info', '将在当前图片处理完成后停止');
+        showMessage('info', '已有图片正在处理');
         return;
     }
 
-    const filesToProcess = uploadedFiles.filter(f => f.status === 'pending');
+    const filesToProcess = requestedFiles.filter(file => file.status === 'pending' && uploadedFiles.includes(file));
     if (filesToProcess.length === 0) {
         showMessage('error', '没有待处理的文件');
         return;
     }
 
-    // 禁用开始处理按钮
     isProcessing = true;
     processingCancelled = false;
-    startProcessingBtn.disabled = false;
-    startProcessingBtn.textContent = '取消处理';
-    startProcessingBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    let successCount = 0;
+    let failureCount = 0;
 
-    // 处理所有文件
     for (let index = 0; index < filesToProcess.length; index++) {
         if (processingCancelled) break;
         const fileObj = filesToProcess[index];
-        startProcessingBtn.textContent = `取消处理 (${index + 1}/${filesToProcess.length})`;
-        await processImage(fileObj);
+        currentProcessingId = fileObj.id;
+        startProcessingBtn.disabled = false;
+        startProcessingBtn.textContent = mode === 'all'
+            ? `停止全部 (${index + 1}/${filesToProcess.length})`
+            : '停止当前处理';
+        renderFileList();
+
+        if (await processImage(fileObj)) {
+            successCount += 1;
+        } else {
+            failureCount += 1;
+        }
     }
 
-    // 恢复按钮状态
+    const wasCancelled = processingCancelled;
     isProcessing = false;
+    processingCancelled = false;
+    currentProcessingId = null;
     startProcessingBtn.disabled = false;
-    startProcessingBtn.textContent = '开始处理';
-    startProcessingBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    startProcessingBtn.textContent = '全部开始处理';
+    renderFileList();
 
     const processedCount = uploadedFiles.filter(f => f.status === 'done').length;
     if (processedCount > 0) {
         batchDownloadBtn.classList.remove('hidden');
     }
 
-    showMessage('info', processingCancelled ? '已停止处理，剩余文件仍在待处理列表' : '所有文件处理完成');
-    processingCancelled = false;
+    if (wasCancelled) {
+        showMessage('info', '已停止处理，剩余文件仍在待处理列表');
+    } else if (mode === 'single' && successCount > 0) {
+        showMessage('info', `${filesToProcess[0].file.name} 处理完成`);
+    } else if (mode === 'all' && failureCount > 0) {
+        showMessage('info', `处理结束：${successCount} 个成功，${failureCount} 个失败`);
+    } else if (mode === 'all') {
+        showMessage('info', '全部文件处理完成');
+    }
+}
+
+startProcessingBtn.addEventListener('click', () => {
+    if (isProcessing) {
+        requestProcessingCancellation();
+        return;
+    }
+
+    void runProcessingQueue(uploadedFiles.filter(file => file.status === 'pending'), 'all');
 });
 
 function getCompressorOptions(mode, originalMimeType) {
@@ -763,24 +981,29 @@ async function processImage(fileObj) {
         fileObj.processedBlob = compressedBlob;
         fileObj.processedURL = URL.createObjectURL(compressedBlob);
         fileObj.processedSize = compressedBlob.size;
-        fileObj.status = 'done';
         fileObj.progress = 100;
 
         // 保存输出格式信息
         fileObj.outputFormat = options.mimeType || fileObj.file.type;
 
-        renderFileList(); // Update status after processing
-        renderProcessedFileList(); // Add to processed list
-        if (selectedPreviewId === fileObj.id) { // Update preview if this file was selected
-            selectForPreview(fileObj.id);
-        }
-    } catch (error) {
-        console.error("处理图片出错:", error);
-        fileObj.status = 'error';
-        fileObj.error = error.message || '处理失败';
-        showMessage('error', `${fileObj.file.name}: ${fileObj.error}`);
+        renderFileList();
+        await animatePendingFileExit(fileObj.id);
+        fileObj.status = 'done';
         renderFileList();
         renderProcessedFileList();
+        if (selectedPreviewId === fileObj.id) {
+            selectForPreview(fileObj.id);
+        }
+        return true;
+    } catch (error) {
+        console.error("处理图片出错:", error);
+        fileObj.error = error.message || '处理失败';
+        showMessage('error', `${fileObj.file.name}: ${fileObj.error}`);
+        await animatePendingFileExit(fileObj.id);
+        fileObj.status = 'error';
+        renderFileList();
+        renderProcessedFileList();
+        return false;
     }
 }
 
@@ -840,11 +1063,13 @@ function handleFileInputChange() {
 // --- File Upload ---
 // 替换原有的事件绑定代码
 initializeUploadArea();
+themeToggleBtn.addEventListener('click', toggleTheme);
 
 // --- Initialize ---
 document.addEventListener('DOMContentLoaded', function () {
     // 初始化上传区域
     initializeUploadArea();
+    updateThemeToggleState();
 
     // 默认选中自定义压缩并显示对应面板
     document.getElementById('modeCustom').checked = true;

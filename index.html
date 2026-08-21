@@ -1,10 +1,17 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="light">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>高性能在线图片工具</title>
+    <script>
+        try {
+            document.documentElement.dataset.theme = localStorage.getItem('convertPictureTheme') === 'dark' ? 'dark' : 'light';
+        } catch (error) {
+            document.documentElement.dataset.theme = 'light';
+        }
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,6 +22,21 @@
 
 <body class="min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
 
+    <button id="themeToggleBtn" type="button" class="theme-toggle" aria-label="切换到暗色主题" aria-pressed="false"
+        title="切换到暗色主题">
+        <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+        </svg>
+        <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            aria-hidden="true">
+            <circle cx="12" cy="12" r="4" stroke-width="2" />
+            <path stroke-linecap="round" stroke-width="2"
+                d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3l1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3l1.42-1.42" />
+        </svg>
+    </button>
+
     <div class="glass-card rounded-2xl w-full max-w-4xl p-6 md:p-10 animate-slide-up">
         <header class="mb-8 text-center">
             <h1 class="text-3xl md:text-4xl font-bold text-gray-800">高性能在线图片工具</h1>
@@ -24,7 +46,7 @@
         <section id="uploadSection" class="mb-8">
             <input type="file" id="fileInput" multiple accept="image/jpeg, image/png, image/gif, image/bmp, image/webp"
                 class="hidden">
-            <div id="uploadArea" class="upload-area p-8 md:p-12 text-center rounded-lg cursor-pointer hover:bg-gray-50">
+            <div id="uploadArea" class="upload-area p-8 md:p-12 text-center rounded-lg cursor-pointer">
                 <div class="upload-icon mb-4">
                     <svg class="mx-auto h-20 w-20 text-blue-500" stroke="currentColor" fill="none" viewBox="0 0 24 24"
                         aria-hidden="true">
@@ -41,169 +63,174 @@
     </div>
 
     <section id="settingsSection" class="mb-8 hidden animate-fade-in w-full max-w-4xl mt-8">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="md:col-span-1 bg-gray-50 p-4 rounded-lg">
-                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                    <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="settings-shell">
+            <div class="settings-toolbar">
+                <h2 class="settings-title">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4">
-                        </path>
+                            d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                     </svg>
-                    压缩模式
-                </h3>
-                <div class="space-y-2">
-                    <div class="mode-option">
-                        <input type="radio" id="modeCustom" name="compressionMode" value="custom" class="mr-2" checked>
-                        <label for="modeCustom" class="text-gray-700">自定义压缩</label>
-                    </div>
-                    <div class="mode-option">
-                        <input type="radio" id="modeShrink" name="compressionMode" value="shrink" class="mr-2">
-                        <label for="modeShrink" class="text-gray-700">缩小优先</label>
-                    </div>
-                    <div class="mode-option">
-                        <input type="radio" id="modeNormal" name="compressionMode" value="normal" class="mr-2">
-                        <label for="modeNormal" class="text-gray-700">普通压缩</label>
-                    </div>
-                    <div class="mode-option">
-                        <input type="radio" id="modeClear" name="compressionMode" value="clear" class="mr-2">
-                        <label for="modeClear" class="text-gray-700">清晰优先</label>
-                    </div>
-                </div>
+                    压缩设置
+                </h2>
+                <fieldset class="compression-modes" aria-label="压缩模式">
+                    <legend class="sr-only">压缩模式</legend>
+                    <label class="mode-option">
+                        <input type="radio" id="modeCustom" name="compressionMode" value="custom" checked>
+                        <span>自定义</span>
+                    </label>
+                    <label class="mode-option">
+                        <input type="radio" id="modeShrink" name="compressionMode" value="shrink">
+                        <span>缩小优先</span>
+                    </label>
+                    <label class="mode-option">
+                        <input type="radio" id="modeNormal" name="compressionMode" value="normal">
+                        <span>普通压缩</span>
+                    </label>
+                    <label class="mode-option">
+                        <input type="radio" id="modeClear" name="compressionMode" value="clear">
+                        <span>清晰优先</span>
+                    </label>
+                </fieldset>
             </div>
 
-            <div id="customSettingsPanel" class="settings-panel md:col-span-2 bg-gray-50 p-4 rounded-lg">
-                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                    <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z">
-                        </path>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                    </svg>
-                    自定义设置
-                </h3>
-                <div class="space-y-4">
-                    <div>
-                        <label for="qualitySlider" class="block text-sm font-medium text-gray-700">图片质量: <span
-                                id="qualityValue">0.8</span></label>
-                        <input type="range" id="qualitySlider" min="0.1" max="1" step="0.05" value="0.8"
-                            class="w-full mt-1">
-                        <p class="text-xs text-gray-500 mt-1">适用于 JPG 和 WebP 格式。值越小，压缩率越高，文件越小。</p>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label for="maxWidthInput" class="block text-sm font-medium text-gray-700">最大宽度
-                                (px)</label>
-                            <input type="number" id="maxWidthInput" min="1" max="20000" step="1" placeholder="例如: 1920"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
+            <div class="settings-content">
+                <div id="customSettingsPanel" class="settings-panel">
+                    <h3 class="sr-only">自定义参数</h3>
+                    <div class="custom-settings-grid">
+                        <div class="setting-field setting-quality">
+                            <div class="setting-label-row">
+                                <label for="qualitySlider">图片质量</label>
+                                <output id="qualityValue" for="qualitySlider">0.8</output>
+                            </div>
+                            <input type="range" id="qualitySlider" min="0.1" max="1" step="0.05" value="0.8">
+                            <p>数值越小，图片体积越小。</p>
                         </div>
-                        <div>
-                            <label for="maxHeightInput" class="block text-sm font-medium text-gray-700">最大高度
-                                (px)</label>
-                            <input type="number" id="maxHeightInput" min="1" max="20000" step="1" placeholder="例如: 1080"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
+
+                        <div class="setting-field setting-size">
+                            <span class="setting-label">最大尺寸 (px)</span>
+                            <div class="dimension-inputs">
+                                <label>
+                                    <span>宽</span>
+                                    <input type="number" id="maxWidthInput" min="1" max="20000" step="1"
+                                        placeholder="1920" aria-label="最大宽度">
+                                </label>
+                                <span class="dimension-separator" aria-hidden="true">×</span>
+                                <label>
+                                    <span>高</span>
+                                    <input type="number" id="maxHeightInput" min="1" max="20000" step="1"
+                                        placeholder="1080" aria-label="最大高度">
+                                </label>
+                            </div>
+                            <p>留空则保持原始尺寸。</p>
+                        </div>
+
+                        <div class="setting-field setting-format">
+                            <label for="outputFormatSelect" class="setting-label">输出格式</label>
+                            <select id="outputFormatSelect">
+                                <option value="image/jpeg">JPG</option>
+                                <option value="image/png">PNG</option>
+                                <option value="image/webp">WebP</option>
+                                <option value="original">保持原格式</option>
+                            </select>
+                            <p>GIF 将输出为静态图片。</p>
                         </div>
                     </div>
-                    <p class="text-xs text-gray-500">如果同时设置宽度和高度，图片将按比例缩放以适应两者。</p>
-                    <div>
-                        <label for="outputFormatSelect" class="block text-sm font-medium text-gray-700">输出格式</label>
-                        <select id="outputFormatSelect"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
-                            <option value="image/jpeg">JPG</option>
-                            <option value="image/png">PNG</option>
-                            <option value="image/webp">WebP</option>
-                            <option value="original">保持原始格式 (若支持)</option>
-                        </select>
-                        <p class="text-xs text-gray-500 mt-1">BMP将转换为所选格式。GIF将转换为静态图片。</p>
+                </div>
+
+                <div id="shrinkSettingsPanel" class="settings-panel hidden">
+                    <div class="preset-summary">
+                        <div class="preset-description">
+                            <h3>缩小优先</h3>
+                            <p>适合网页图片和快速加载场景。</p>
+                        </div>
+                        <dl class="preset-metrics">
+                            <div><dt>质量</dt><dd>0.6</dd></div>
+                            <div><dt>最大尺寸</dt><dd>1280 × 720</dd></div>
+                            <div><dt>格式</dt><dd>JPG</dd></div>
+                        </dl>
                     </div>
                 </div>
-            </div>
 
-            <!-- 缩小优先设置面板 -->
-            <div id="shrinkSettingsPanel" class="settings-panel md:col-span-2 bg-gray-50 p-4 rounded-lg hidden">
-                <h3 class="text-lg font-semibold text-gray-700 mb-3">缩小优先模式</h3>
-                <div class="space-y-4">
-                    <p class="text-gray-700">此模式将优先减小图片尺寸，适合需要快速加载的网页图片。</p>
-                    <div class="bg-blue-50 p-3 rounded-md">
-                        <h4 class="font-medium text-blue-700">预设参数:</h4>
-                        <ul class="list-disc list-inside text-sm text-gray-700 mt-2 space-y-1">
-                            <li>图片质量: 0.6 (中等压缩)</li>
-                            <li>最大尺寸: 1280×720 像素</li>
-                            <li>输出格式: JPG</li>
-                        </ul>
+                <div id="normalSettingsPanel" class="settings-panel hidden">
+                    <div class="preset-summary">
+                        <div class="preset-description">
+                            <h3>普通压缩</h3>
+                            <p>兼顾图片质量与文件体积。</p>
+                        </div>
+                        <dl class="preset-metrics">
+                            <div><dt>质量</dt><dd>0.75</dd></div>
+                            <div><dt>最大尺寸</dt><dd>1920 × 1080</dd></div>
+                            <div><dt>格式</dt><dd>JPG</dd></div>
+                        </dl>
                     </div>
-                    <p class="text-sm text-gray-600">此模式可以显著减小文件大小，但可能会降低图片质量。</p>
                 </div>
-            </div>
 
-            <!-- 普通压缩设置面板 -->
-            <div id="normalSettingsPanel" class="settings-panel md:col-span-2 bg-gray-50 p-4 rounded-lg hidden">
-                <h3 class="text-lg font-semibold text-gray-700 mb-3">普通压缩模式</h3>
-                <div class="space-y-4">
-                    <p class="text-gray-700">此模式提供平衡的压缩效果，适合大多数使用场景。</p>
-                    <div class="bg-blue-50 p-3 rounded-md">
-                        <h4 class="font-medium text-blue-700">预设参数:</h4>
-                        <ul class="list-disc list-inside text-sm text-gray-700 mt-2 space-y-1">
-                            <li>图片质量: 0.75 (良好质量)</li>
-                            <li>最大尺寸: 1920×1080 像素</li>
-                            <li>输出格式: JPG</li>
-                        </ul>
+                <div id="clearSettingsPanel" class="settings-panel hidden">
+                    <div class="preset-summary">
+                        <div class="preset-description">
+                            <h3>清晰优先</h3>
+                            <p>适合需要保留细节的展示图片。</p>
+                        </div>
+                        <dl class="preset-metrics">
+                            <div><dt>质量</dt><dd>0.9</dd></div>
+                            <div><dt>尺寸</dt><dd>保持原尺寸</dd></div>
+                            <div><dt>格式</dt><dd>WebP</dd></div>
+                        </dl>
                     </div>
-                    <p class="text-sm text-gray-600">此模式在文件大小和图片质量之间取得良好平衡。</p>
-                </div>
-            </div>
-
-            <!-- 清晰优先设置面板 -->
-            <div id="clearSettingsPanel" class="settings-panel md:col-span-2 bg-gray-50 p-4 rounded-lg hidden">
-                <h3 class="text-lg font-semibold text-gray-700 mb-3">清晰优先模式</h3>
-                <div class="space-y-4">
-                    <p class="text-gray-700">此模式优先保证图片清晰度，适合需要高质量展示的图片。</p>
-                    <div class="bg-blue-50 p-3 rounded-md">
-                        <h4 class="font-medium text-blue-700">预设参数:</h4>
-                        <ul class="list-disc list-inside text-sm text-gray-700 mt-2 space-y-1">
-                            <li>图片质量: 0.9 (高质量)</li>
-                            <li>保持原始尺寸</li>
-                            <li>输出格式: WebP (更好的压缩效果)</li>
-                        </ul>
-                    </div>
-                    <p class="text-sm text-gray-600">此模式会保持较高的图片质量，压缩率相对较低。</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <section id="processingSection" class="mb-8 hidden animate-fade-in w-full max-w-4xl">
-        <div class="flex justify-between items-center mb-4">
+    <section id="processingSection" class="collapsible-section mb-8 hidden animate-fade-in w-full max-w-4xl">
+        <div id="processingHeader" class="flex justify-between items-center mb-4">
             <h2 class="text-xl font-semibold text-gray-700">待处理文件</h2>
-            <button id="startProcessingBtn" class="btn btn-primary">开始处理</button>
+            <button id="startProcessingBtn" class="btn btn-primary">全部开始处理</button>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="bg-gray-50 p-4 rounded-lg max-h-96 overflow-y-auto file-list-container">
-                <ul id="fileList" class="space-y-3">
-                </ul>
-            </div>
+        <div id="pendingFileListContainer"
+            class="bg-gray-50 p-4 rounded-lg max-h-96 overflow-y-auto file-list-container">
+            <ul id="fileList" class="pending-file-list">
+            </ul>
+        </div>
+    </section>
 
-            <div id="previewArea" class="bg-gray-50 p-4 rounded-lg hidden">
-                <h3 class="text-lg font-semibold text-gray-700 mb-3">图片预览: <span id="previewFileName"
+    <section id="previewSection" class="collapsible-section mb-8 hidden animate-fade-in w-full max-w-4xl">
+        <div id="previewArea" class="bg-gray-50 p-4 rounded-lg">
+            <div class="preview-header">
+                <h3 class="preview-heading text-lg font-semibold text-gray-700">图片预览: <span id="previewFileName"
                         class="text-base font-normal"></span></h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-                    <div class="preview-container">
-                        <h4 class="text-center text-sm font-medium text-gray-600 mb-2">处理前</h4>
-                        <img id="previewOriginal" src="https://placehold.co/400x300/e2e8f0/94a3b8?text=处理前" alt="处理前图片"
-                            class="preview-image mx-auto">
+                <button id="closePreviewBtn" type="button" class="preview-close-btn" aria-label="关闭预览"
+                    title="关闭预览">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 6l12 12M18 6L6 18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                <div class="preview-container">
+                    <h4 class="text-center text-sm font-medium text-gray-600">处理前</h4>
+                    <div class="preview-media">
+                        <img id="previewOriginal" alt="处理前图片" class="preview-image mx-auto">
+                    </div>
+                    <div class="preview-meta">
                         <p id="previewOriginalSize" class="text-center text-xs text-gray-500 mt-1"></p>
                     </div>
-                    <div class="preview-container">
-                        <h4 class="text-center text-sm font-medium text-gray-600 mb-2">处理后</h4>
-                        <img id="previewProcessed" src="https://placehold.co/400x300/e2e8f0/94a3b8?text=处理后" alt="处理后图片"
-                            class="preview-image mx-auto">
+                </div>
+                <div class="preview-container">
+                    <h4 class="text-center text-sm font-medium text-gray-600">处理后</h4>
+                    <div class="preview-media">
+                        <img id="previewProcessed" alt="处理后图片" class="preview-image mx-auto hidden">
+                        <div id="previewProcessedPlaceholder" class="preview-generated-placeholder" role="img"
+                            aria-label="图片等待处理">
+                            <div id="previewPlaceholderArt" class="placeholder-art" aria-hidden="true"></div>
+                            <span id="previewPlaceholderLabel" class="placeholder-label">等待处理</span>
+                        </div>
+                    </div>
+                    <div class="preview-meta">
                         <p id="previewProcessedSize" class="text-center text-xs text-gray-500 mt-1"></p>
                         <p id="previewSavings" class="text-center text-sm font-semibold text-green-600 mt-1"></p>
                     </div>
-                </div>
-                <div id="previewPlaceholder" class="text-center text-gray-500 py-10">
-                    <p>点击文件列表中的“预览”按钮查看对比效果。</p>
                 </div>
             </div>
         </div>
