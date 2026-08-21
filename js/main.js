@@ -506,7 +506,7 @@ function toggleTheme() {
 
 function showMessage(type, text) {
     const messageDiv = document.createElement('div');
-    messageDiv.className = `message-toast p-3 rounded-md text-sm mb-2 ${type === 'error' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`;
+    messageDiv.className = `message-toast p-3 rounded-md text-sm ${type === 'error' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`;
     messageDiv.textContent = text;
     messageArea.appendChild(messageDiv);
     setTimeout(() => {

@@ -116,12 +116,12 @@ body {
 @keyframes messageIn {
     from {
         opacity: 0;
-        transform: translateY(6px) scale(0.99);
+        transform: translate3d(0, 12px, 0) scale(0.985);
     }
 
     to {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: translate3d(0, 0, 0) scale(1);
     }
 }
 
@@ -168,9 +168,14 @@ body {
 }
 
 @keyframes messageOut {
+    from {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
     to {
         opacity: 0;
-        transform: translateY(-4px);
+        transform: translate3d(0, 8px, 0) scale(0.99);
     }
 }
 
@@ -213,8 +218,29 @@ body {
     animation: sectionCollapse 380ms var(--motion-ease) both;
 }
 
+#messageArea {
+    position: fixed;
+    z-index: 60;
+    right: auto;
+    bottom: max(1rem, env(safe-area-inset-bottom));
+    left: 50%;
+    width: calc(100% - 2rem);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0 !important;
+    pointer-events: none;
+    transform: translateX(-50%);
+}
+
 .message-toast {
+    width: 100%;
+    margin: 0 !important;
+    pointer-events: auto;
+    transform-origin: bottom center;
+    will-change: opacity, transform;
     animation: messageIn var(--motion-base) var(--motion-ease) both;
+    box-shadow: var(--shadow-soft);
 }
 
 .message-toast.is-leaving {
