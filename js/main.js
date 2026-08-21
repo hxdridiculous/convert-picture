@@ -514,7 +514,7 @@ function showMessage(type, text) {
         messageDiv.classList.add('is-leaving');
         messageDiv.addEventListener('animationend', () => messageDiv.remove(), { once: true });
         setTimeout(() => messageDiv.remove(), 300);
-    }, 4700);
+    }, 1700);
 }
 
 // --- File Handling ---
