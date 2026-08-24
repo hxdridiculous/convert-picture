@@ -58,9 +58,9 @@
 <body class="min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
 
     <div class="top-controls">
-        <button id="languageToggleBtn" type="button" class="language-toggle" aria-label="中 - 切换为英文" aria-pressed="true" title="切换为英文">
+        <a id="languageToggleBtn" href="/" hreflang="en" class="language-toggle" aria-label="中 - 切换为英文" title="切换为英文">
             <span id="languageToggleText" aria-hidden="true">中</span>
-        </button>
+        </a>
         <button id="themeToggleBtn" type="button" class="theme-toggle" aria-label="切换到暗色主题" aria-pressed="false" title="切换到暗色主题">
             <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"></path>
@@ -288,11 +288,6 @@
 
     <footer class="mt-12 text-center">
         <p class="text-sm text-gray-500">© <span id="currentYear"></span> <span data-i18n="footer.product">免费图片压缩与转换工具</span></p>
-        <nav class="language-links" aria-label="语言版本" data-i18n-aria-label="footer.languages">
-            <a href="/" lang="en" hreflang="en" data-language-link="en">English</a>
-            <span aria-hidden="true">/</span>
-            <a href="/zh-CN/" lang="zh-CN" hreflang="zh-CN" data-language-link="zh" aria-current="page">简体中文</a>
-        </nav>
     </footer>
 
 

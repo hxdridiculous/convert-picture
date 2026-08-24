@@ -180,8 +180,7 @@ const TRANSLATIONS = {
         'zip.preparing': 'Preparing the ZIP file...',
         'zip.ready': 'The ZIP file is ready. Download started.',
         'zip.error': 'Unable to create the ZIP file.',
-        'footer.product': 'Free Image Compressor & Converter',
-        'footer.languages': 'Language versions'
+        'footer.product': 'Free Image Compressor & Converter'
     },
     zh: {
         'app.title': '免费在线图片压缩与转换工具 | JPG、PNG、WebP',
@@ -289,8 +288,7 @@ const TRANSLATIONS = {
         'zip.preparing': '正在准备 ZIP 文件...',
         'zip.ready': 'ZIP 文件已准备好，开始下载。',
         'zip.error': '创建 ZIP 文件失败。',
-        'footer.product': '免费图片压缩与转换工具',
-        'footer.languages': '语言版本'
+        'footer.product': '免费图片压缩与转换工具'
     }
 };
 const SEO_CONFIG = {
@@ -480,20 +478,14 @@ function applyStaticTranslations() {
 
 function updateLanguageToggleState() {
     const isChinese = currentLanguage === 'zh';
+    const targetLanguage = isChinese ? 'en' : 'zh';
     const actionLabel = isChinese ? t('language.switchToEnglish') : t('language.switchToChinese');
     const accessibleLabel = isChinese ? t('language.currentChinese') : t('language.currentEnglish');
     languageToggleText.textContent = isChinese ? '中' : 'EN';
+    languageToggleBtn.setAttribute('href', SEO_CONFIG[targetLanguage].path);
+    languageToggleBtn.setAttribute('hreflang', SEO_CONFIG[targetLanguage].language);
     languageToggleBtn.setAttribute('aria-label', accessibleLabel);
-    languageToggleBtn.setAttribute('aria-pressed', String(isChinese));
     languageToggleBtn.title = actionLabel;
-    document.querySelectorAll('[data-language-link]').forEach(link => {
-        const isCurrentLanguage = link.dataset.languageLink === currentLanguage;
-        if (isCurrentLanguage) {
-            link.setAttribute('aria-current', 'page');
-        } else {
-            link.removeAttribute('aria-current');
-        }
-    });
 }
 
 function setLanguage(language, persist = false) {
@@ -528,7 +520,12 @@ function setLanguage(language, persist = false) {
     }
 }
 
-function toggleLanguage() {
+function toggleLanguage(event) {
+    if (event && (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)) {
+        return;
+    }
+
+    event?.preventDefault();
     const nextLanguage = currentLanguage === 'en' ? 'zh' : 'en';
     syncLanguageUrl(nextLanguage);
     setLanguage(nextLanguage, true);
@@ -1565,14 +1562,6 @@ function handleFileInputChange() {
 initializeUploadArea();
 languageToggleBtn.addEventListener('click', toggleLanguage);
 themeToggleBtn.addEventListener('click', toggleTheme);
-document.querySelectorAll('[data-language-link]').forEach(link => {
-    link.addEventListener('click', event => {
-        event.preventDefault();
-        const nextLanguage = link.dataset.languageLink === 'zh' ? 'zh' : 'en';
-        syncLanguageUrl(nextLanguage);
-        setLanguage(nextLanguage, true);
-    });
-});
 window.addEventListener('popstate', () => {
     setLanguage(getLanguageFromPath(), true);
 });

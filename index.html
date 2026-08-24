@@ -91,10 +91,10 @@
 <body class="min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
 
     <div class="top-controls">
-        <button id="languageToggleBtn" type="button" class="language-toggle" aria-label="EN - Switch to Chinese"
-            aria-pressed="false" title="Switch to Chinese">
+        <a id="languageToggleBtn" href="/zh-CN/" hreflang="zh-CN" class="language-toggle"
+            aria-label="EN - Switch to Chinese" title="Switch to Chinese">
             <span id="languageToggleText" aria-hidden="true">EN</span>
-        </button>
+        </a>
         <button id="themeToggleBtn" type="button" class="theme-toggle" aria-label="Switch to dark theme"
             aria-pressed="false" title="Switch to dark theme">
             <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -361,11 +361,6 @@
     <footer class="mt-12 text-center">
         <p class="text-sm text-gray-500">&copy; <span id="currentYear"></span> <span
                 data-i18n="footer.product">Free Image Compressor &amp; Converter</span></p>
-        <nav class="language-links" aria-label="Language versions" data-i18n-aria-label="footer.languages">
-            <a href="/" lang="en" hreflang="en" data-language-link="en">English</a>
-            <span aria-hidden="true">/</span>
-            <a href="/zh-CN/" lang="zh-CN" hreflang="zh-CN" data-language-link="zh">简体中文</a>
-        </nav>
     </footer>
 
 </body>
