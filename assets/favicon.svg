@@ -1,69 +1,71 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-  <!-- 背景圆形 -->
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Image compressor and converter</title>
   <defs>
-    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#3498db;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#2980b9;stop-opacity:1" />
+    <linearGradient id="background" x1="72" y1="58" x2="440" y2="454" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="0.52" stop-color="#E5F6FD"/>
+      <stop offset="1" stop-color="#BEE8F8"/>
     </linearGradient>
-    <!-- 光泽效果 -->
-    <linearGradient id="shineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.5" />
-      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0" />
+    <radialGradient id="backgroundGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(170 122) rotate(48) scale(310)">
+      <stop stop-color="#FFFFFF" stop-opacity="0.92"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rearGlass" x1="116" y1="113" x2="328" y2="326" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.96"/>
+      <stop offset="0.48" stop-color="#CBEFFA" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#55BFE3" stop-opacity="0.58"/>
     </linearGradient>
-    <!-- 阴影效果 -->
-    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="4" />
-      <feOffset dx="2" dy="4" result="offsetblur" />
-      <feComponentTransfer>
-        <feFuncA type="linear" slope="0.3" />
-      </feComponentTransfer>
-      <feMerge>
-        <feMergeNode />
-        <feMergeNode in="SourceGraphic" />
-      </feMerge>
+    <linearGradient id="frontGlass" x1="244" y1="222" x2="417" y2="389" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.97"/>
+      <stop offset="0.5" stop-color="#C3F0F3" stop-opacity="0.88"/>
+      <stop offset="1" stop-color="#37C9C3" stop-opacity="0.62"/>
+    </linearGradient>
+    <linearGradient id="rearScene" x1="104" y1="178" x2="334" y2="292" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#74D5EF" stop-opacity="0.38"/>
+      <stop offset="1" stop-color="#157FAF" stop-opacity="0.58"/>
+    </linearGradient>
+    <linearGradient id="frontScene" x1="252" y1="275" x2="406" y2="362" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#55DADA" stop-opacity="0.46"/>
+      <stop offset="1" stop-color="#078CA5" stop-opacity="0.68"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="126" y1="105" x2="350" y2="334" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="0.52" stop-color="#63C6E8"/>
+      <stop offset="1" stop-color="#178BBE"/>
+    </linearGradient>
+    <filter id="cardShadow" x="36" y="65" width="426" height="388" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="20" stdDeviation="18" flood-color="#168AB3" flood-opacity="0.23"/>
+    </filter>
+    <filter id="floorBlur" x="82" y="366" width="348" height="100" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="12"/>
     </filter>
   </defs>
-  
-  <!-- 主圆形背景 -->
-  <circle cx="100" cy="100" r="85" fill="url(#bgGradient)" filter="url(#dropShadow)" />
-  
-  <!-- 光泽效果 -->
-  <ellipse cx="80" cy="70" rx="70" ry="40" fill="url(#shineGradient)" opacity="0.3" />
-  
-  <!-- 新的中心图案：更大的图像转换符号 -->
-  <g>
-    <!-- 左侧图像表示 -->
-    <rect x="40" y="60" width="50" height="50" rx="5" fill="#ECF0F1" stroke="#2C3E50" stroke-width="3" />
-    <line x1="40" y1="75" x2="90" y2="75" stroke="#2C3E50" stroke-width="2" />
-    <circle cx="50" cy="67" r="3" fill="#2C3E50" />
-    
-    <!-- 山峰和太阳图案（左侧图像内容） -->
-    <path d="M45,95 L55,80 L65,90 L80,70 L90,90" stroke="#2C3E50" stroke-width="3" fill="none" stroke-linejoin="round" stroke-linecap="round" />
-    <circle cx="75" cy="65" r="6" fill="#E74C3C" />
-    
-    <!-- 右侧图像表示 -->
-    <rect x="110" y="90" width="50" height="50" rx="5" fill="#ECF0F1" stroke="#2C3E50" stroke-width="3" />
-    <line x1="110" y1="105" x2="160" y2="105" stroke="#2C3E50" stroke-width="2" />
-    <circle cx="120" cy="97" r="3" fill="#2C3E50" />
-    
-    <!-- 不同样式的图形（右侧图像内容） -->
-    <path d="M120,125 C125,115 140,140 145,125 S155,110 160,125" stroke="#2C3E50" stroke-width="3" fill="none" stroke-linejoin="round" stroke-linecap="round" />
-    <rect x="125" y="115" width="10" height="10" fill="#27AE60" />
-    
-    <!-- 全新的箭头设计 -->
-    <g transform="translate(100,100) scale(0.85) translate(-100,-100)">
-      <!-- 左右双向转换箭头 -->
-      <circle cx="100" cy="100" r="14" fill="#ECF0F1" stroke="#2C3E50" stroke-width="2" />
-      
-      <!-- 双箭头符号 -->
-      <path d="M92,100 L108,100" stroke="#2C3E50" stroke-width="2.5" stroke-linecap="round" />
-      
-      <!-- 左箭头 -->
-      <path d="M97,95 L92,100 L97,105" stroke="#2C3E50" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
-      
-      <!-- 右箭头 -->
-      <path d="M103,95 L108,100 L103,105" stroke="#2C3E50" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+
+  <rect x="24" y="24" width="464" height="464" rx="116" fill="url(#background)"/>
+  <rect x="25.5" y="25.5" width="461" height="461" rx="114.5" stroke="#FFFFFF" stroke-width="3" stroke-opacity="0.9"/>
+  <rect x="24" y="24" width="464" height="464" rx="116" fill="url(#backgroundGlow)"/>
+  <ellipse cx="256" cy="416" rx="150" ry="26" fill="#1F96BF" fill-opacity="0.18" filter="url(#floorBlur)"/>
+
+  <g filter="url(#cardShadow)">
+    <g transform="rotate(-9 220 218)">
+      <rect x="83" y="124" width="290" height="218" rx="50" fill="#0C87B8" fill-opacity="0.24"/>
+      <rect x="76" y="106" width="290" height="218" rx="50" fill="url(#rearGlass)" stroke="url(#edge)" stroke-width="7"/>
+      <path d="M100 158C100 141.431 113.431 128 130 128H312C328.569 128 342 141.431 342 158V168H100V158Z" fill="#FFFFFF" fill-opacity="0.38"/>
+      <circle cx="124" cy="147" r="9" fill="#FFFFFF" fill-opacity="0.92"/>
+      <circle cx="151" cy="147" r="9" fill="#5FC6ED" fill-opacity="0.82"/>
+      <path d="M104 282L163 214L207 254L251 198L341 282V286C341 294.837 333.837 302 325 302H120C111.163 302 104 294.837 104 286V282Z" fill="url(#rearScene)"/>
+      <circle cx="289" cy="201" r="22" fill="#FFFFFF" fill-opacity="0.72"/>
+      <path d="M100 129C100 118.507 108.507 110 119 110H324" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round" stroke-opacity="0.72"/>
+    </g>
+
+    <g transform="rotate(8 328 310)">
+      <rect x="226" y="242" width="202" height="158" rx="40" fill="#10A8B3" fill-opacity="0.26"/>
+      <rect x="219" y="225" width="202" height="158" rx="40" fill="url(#frontGlass)" stroke="#FFFFFF" stroke-width="7" stroke-opacity="0.92"/>
+      <path d="M240 342L278 301L310 329L343 284L399 342V347C399 354.732 392.732 361 385 361H254C246.268 361 240 354.732 240 347V342Z" fill="url(#frontScene)"/>
+      <circle cx="368" cy="278" r="16" fill="#FFFFFF" fill-opacity="0.82"/>
+      <path d="M244 247C244 238.716 250.716 232 259 232H374" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" stroke-opacity="0.78"/>
     </g>
   </g>
+
 </svg>

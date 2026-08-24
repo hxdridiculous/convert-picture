@@ -180,7 +180,10 @@ const TRANSLATIONS = {
         'zip.preparing': 'Preparing the ZIP file...',
         'zip.ready': 'The ZIP file is ready. Download started.',
         'zip.error': 'Unable to create the ZIP file.',
-        'footer.product': 'Free Image Compressor & Converter'
+        'footer.product': 'Free Image Compressor & Converter',
+        'footer.openSource': 'Open source on GitHub',
+        'footer.githubAria': 'Open source on GitHub, opens in a new tab',
+        'footer.githubTitle': 'View this open-source project on GitHub'
     },
     zh: {
         'app.title': '免费在线图片压缩与转换工具 | JPG、PNG、WebP',
@@ -288,7 +291,10 @@ const TRANSLATIONS = {
         'zip.preparing': '正在准备 ZIP 文件...',
         'zip.ready': 'ZIP 文件已准备好，开始下载。',
         'zip.error': '创建 ZIP 文件失败。',
-        'footer.product': '免费图片压缩与转换工具'
+        'footer.product': '免费图片压缩与转换工具',
+        'footer.openSource': 'GitHub 开源项目',
+        'footer.githubAria': 'GitHub 开源项目，在新标签页打开',
+        'footer.githubTitle': '在 GitHub 上查看开源项目'
     }
 };
 const SEO_CONFIG = {
